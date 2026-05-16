@@ -13,7 +13,6 @@ import {
   FlatList,
   Modal,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -71,12 +70,14 @@ export default function GoalsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
+    <View className="flex-1 bg-appBackground">
+      <View className="px-5 pt-4 pb-3">
+        <View className="flex-row justify-between items-start">
           <View>
-            <Text style={styles.title}>Savings Goals</Text>
-            <Text style={styles.subtitle}>
+            <Text className="text-[28px] font-extrabold text-appText">
+              Savings Goals
+            </Text>
+            <Text className="text-sm text-appText-muted mt-0.5">
               Track your progress toward targets
             </Text>
           </View>
@@ -91,22 +92,20 @@ export default function GoalsScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.goalCard}
+            className="bg-appSurface rounded-2xl p-4 mb-3"
             onPress={() => {
               setSelectedGoalId(item.goal.id);
               setShowContributeModal(true);
             }}
           >
-            <View style={styles.goalHeader}>
+            <View className="flex-row items-center gap-3 mb-3.5">
               <View
-                style={[
-                  styles.goalIcon,
-                  {
-                    backgroundColor: item.isAchieved
-                      ? Colors.primaryMuted
-                      : Colors.accentMuted,
-                  },
-                ]}
+                className="w-11 h-11 rounded-full items-center justify-center"
+                style={{
+                  backgroundColor: item.isAchieved
+                    ? Colors.primaryMuted
+                    : Colors.accentMuted,
+                }}
               >
                 {item.isAchieved ? (
                   <CheckCircle2 size={20} color={Colors.primary} />
@@ -114,9 +113,11 @@ export default function GoalsScreen() {
                   <Target size={20} color={Colors.accent} />
                 )}
               </View>
-              <View style={styles.goalInfo}>
-                <Text style={styles.goalName}>{item.goal.name}</Text>
-                <Text style={styles.goalTarget}>
+              <View className="flex-1">
+                <Text className="text-base font-bold text-appText">
+                  {item.goal.name}
+                </Text>
+                <Text className="text-[13px] text-appText-muted mt-0.5">
                   Target: {formatCurrency(item.goal.targetAmount)}
                 </Text>
               </View>
@@ -136,16 +137,20 @@ export default function GoalsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.goalAmounts}>
+            <View className="flex-row justify-between mb-3">
               <View>
-                <Text style={styles.amountLabel}>Saved</Text>
-                <Text style={styles.amountValue}>
+                <Text className="text-[11px] text-appText-muted uppercase tracking-wider">
+                  Saved
+                </Text>
+                <Text className="text-lg font-bold text-appText mt-0.5">
                   {formatCurrency(item.goal.currentAmount)}
                 </Text>
               </View>
-              <View style={{ alignItems: "flex-end" }}>
-                <Text style={styles.amountLabel}>Remaining</Text>
-                <Text style={styles.amountValue}>
+              <View className="items-end">
+                <Text className="text-[11px] text-appText-muted uppercase tracking-wider">
+                  Remaining
+                </Text>
+                <Text className="text-lg font-bold text-appText mt-0.5">
                   {formatCurrency(
                     Math.max(
                       0,
@@ -156,30 +161,28 @@ export default function GoalsScreen() {
               </View>
             </View>
 
-            <View style={styles.progressBarBg}>
+            <View className="h-2.5 bg-appSurface-highlight rounded-md overflow-hidden mb-2.5">
               <View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: `${item.percentage}%`,
-                    backgroundColor: item.isAchieved
-                      ? Colors.primary
-                      : Colors.accent,
-                  },
-                ]}
+                className="h-full rounded-md"
+                style={{
+                  width: `${item.percentage}%`,
+                  backgroundColor: item.isAchieved
+                    ? Colors.primary
+                    : Colors.accent,
+                }}
               />
             </View>
 
-            <View style={styles.goalFooter}>
-              <View style={styles.footerItem}>
+            <View className="flex-row justify-between items-center">
+              <View className="flex-row items-center gap-1">
                 <TrendingUp size={14} color={Colors.textMuted} />
-                <Text style={styles.footerText}>
+                <Text className="text-xs text-appText-muted">
                   {item.percentage.toFixed(0)}% complete
                 </Text>
               </View>
-              <View style={styles.footerItem}>
+              <View className="flex-row items-center gap-1">
                 <Calendar size={14} color={Colors.textMuted} />
-                <Text style={styles.footerText}>
+                <Text className="text-xs text-appText-muted">
                   {item.daysRemaining > 0
                     ? `${item.daysRemaining} days left`
                     : "Deadline passed"}
@@ -188,56 +191,69 @@ export default function GoalsScreen() {
             </View>
 
             {item.isAchieved && (
-              <View style={styles.achievedBadge}>
+              <View className="flex-row items-center gap-1.5 self-start bg-appPrimary-muted px-2.5 py-1 rounded-lg mt-2.5">
                 <CheckCircle2 size={14} color={Colors.primary} />
-                <Text style={styles.achievedText}>Goal Achieved!</Text>
+                <Text className="text-xs font-bold text-appPrimary">
+                  Goal Achieved!
+                </Text>
               </View>
             )}
 
-            <View style={styles.dateRow}>
+            <View className="flex-row items-center gap-1.5 mt-2.5 pt-2.5 border-t border-appBorder">
               <Calendar size={12} color={Colors.textMuted} />
-              <Text style={styles.dateText}>
+              <Text className="text-xs text-appText-muted">
                 Deadline: {formatDate(item.goal.deadline)}
               </Text>
             </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No goals yet</Text>
-            <Text style={styles.emptySub}>
+          <View className="items-center py-15">
+            <Text className="text-appText text-base font-semibold">
+              No goals yet
+            </Text>
+            <Text className="text-appText-muted text-[13px] mt-1">
               Set a savings goal to stay motivated
             </Text>
           </View>
         }
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setShowModal(true)}>
+      <TouchableOpacity
+        className="absolute right-5 bottom-6 w-14 h-14 rounded-full bg-appPrimary items-center justify-center shadow-md shadow-appPrimary elevation-5"
+        onPress={() => setShowModal(true)}
+      >
         <Plus size={24} color="#fff" />
       </TouchableOpacity>
 
       <Modal visible={showModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>New Savings Goal</Text>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-xl font-bold text-appText">
+                New Savings Goal
+              </Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>Goal Name</Text>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                Goal Name
+              </Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-3.5 py-3 text-appText text-[15px] border border-appBorder"
                 placeholder="e.g. Emergency Fund"
                 placeholderTextColor={Colors.textMuted}
                 value={name}
                 onChangeText={setName}
               />
 
-              <Text style={styles.inputLabel}>Target Amount</Text>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                Target Amount
+              </Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-3.5 py-3 text-appText text-[15px] border border-appBorder"
                 placeholder="0.00"
                 placeholderTextColor={Colors.textMuted}
                 keyboardType="decimal-pad"
@@ -245,17 +261,24 @@ export default function GoalsScreen() {
                 onChangeText={setTargetAmount}
               />
 
-              <Text style={styles.inputLabel}>Deadline</Text>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                Deadline
+              </Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-3.5 py-3 text-appText text-[15px] border border-appBorder"
                 value={deadline}
                 onChangeText={setDeadline}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={Colors.textMuted}
               />
 
-              <TouchableOpacity style={styles.submitBtn} onPress={handleAdd}>
-                <Text style={styles.submitBtnText}>Create Goal</Text>
+              <TouchableOpacity
+                className="bg-appPrimary rounded-2xl py-4 items-center mt-6"
+                onPress={handleAdd}
+              >
+                <Text className="text-white text-base font-bold">
+                  Create Goal
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -263,18 +286,22 @@ export default function GoalsScreen() {
       </Modal>
 
       <Modal visible={showContributeModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add to Goal</Text>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-xl font-bold text-appText">
+                Add to Goal
+              </Text>
               <TouchableOpacity onPress={() => setShowContributeModal(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>Amount to Add</Text>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                Amount to Add
+              </Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-3.5 py-3 text-appText text-[15px] border border-appBorder"
                 placeholder="0.00"
                 placeholderTextColor={Colors.textMuted}
                 keyboardType="decimal-pad"
@@ -282,10 +309,12 @@ export default function GoalsScreen() {
                 onChangeText={setContributeAmount}
               />
               <TouchableOpacity
-                style={styles.submitBtn}
+                className="bg-appPrimary rounded-2xl py-4 items-center mt-6"
                 onPress={handleContribute}
               >
-                <Text style={styles.submitBtnText}>Contribute</Text>
+                <Text className="text-white text-base font-bold">
+                  Contribute
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -294,217 +323,3 @@ export default function GoalsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  goalCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  goalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 14,
-  },
-  goalIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  goalInfo: {
-    flex: 1,
-  },
-  goalName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  goalTarget: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  goalAmounts: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  amountLabel: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  amountValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.text,
-    marginTop: 2,
-  },
-  progressBarBg: {
-    height: 10,
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: 5,
-    overflow: "hidden",
-    marginBottom: 10,
-  },
-  progressBarFill: {
-    height: "100%",
-    borderRadius: 5,
-  },
-  goalFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  footerItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  footerText: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  achievedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
-    backgroundColor: Colors.primaryMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  achievedText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.primary,
-  },
-  dateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  dateText: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptySub: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    marginTop: 4,
-  },
-  fab: {
-    position: "absolute",
-    right: 20,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: Colors.surfaceElevated,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    maxHeight: "85%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: Colors.text,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 24,
-  },
-  submitBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});

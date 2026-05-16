@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import {
   Modal,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -20,14 +19,14 @@ export function NotificationBell() {
   return (
     <>
       <TouchableOpacity
-        style={styles.bellButton}
+        className="w-[42px] h-[42px] rounded-full bg-appSurface items-center justify-center"
         onPress={() => setVisible(true)}
         activeOpacity={0.7}
       >
         <Bell size={22} color={Colors.text} />
         {unreadAlertsCount > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
+          <View className="absolute -top-0.5 -right-0.5 bg-appDanger rounded-full min-w-[20px] h-[20px] items-center justify-center border-2 border-appBackground">
+            <Text className="text-white text-[10px] font-bold">
               {unreadAlertsCount > 99 ? "99+" : unreadAlertsCount}
             </Text>
           </View>
@@ -35,10 +34,10 @@ export function NotificationBell() {
       </TouchableOpacity>
 
       <Modal visible={visible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Notifications</Text>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-xl font-bold text-appText">Notifications</Text>
               <TouchableOpacity onPress={() => setVisible(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
@@ -46,31 +45,23 @@ export function NotificationBell() {
 
             <ScrollView showsVerticalScrollIndicator={false}>
               {alerts.length === 0 ? (
-                <View style={styles.emptyState}>
+                <View className="items-center py-15 gap-3">
                   <Bell size={32} color={Colors.textMuted} />
-                  <Text style={styles.emptyText}>No notifications yet</Text>
-                  <Text style={styles.emptySub}>
+                  <Text className="text-appText text-base font-semibold">No notifications yet</Text>
+                  <Text className="text-appText-muted text-[13px] text-center px-5">
                     Alerts about budgets and goals will appear here
                   </Text>
                 </View>
               ) : (
-                <View style={styles.alertsList}>
+                <View className="gap-2.5">
                   {alerts.map((alert) => (
                     <TouchableOpacity
                       key={alert.id}
-                      style={[
-                        styles.alertCard,
-                        !alert.read && styles.alertUnread,
-                        alert.type === "budget_exceeded"
-                          ? styles.alertDanger
-                          : alert.type === "budget_near_limit"
-                            ? styles.alertWarning
-                            : styles.alertSuccess,
-                      ]}
+                      className={`flex-row items-start gap-3 p-3.5 rounded-2xl bg-appSurface ${!alert.read ? "border border-appBorder-light" : ""} ${alert.type === "budget_exceeded" ? "border-l-4 border-l-appDanger" : alert.type === "budget_near_limit" ? "border-l-4 border-l-appAccent" : "border-l-4 border-l-appPrimary"}`}
                       onPress={() => markAlertRead(alert.id)}
                       activeOpacity={0.8}
                     >
-                      <View style={styles.alertIcon}>
+                      <View className="mt-0.5">
                         {alert.type === "budget_exceeded" ? (
                           <AlertTriangle size={18} color={Colors.danger} />
                         ) : alert.type === "budget_near_limit" ? (
@@ -79,14 +70,14 @@ export function NotificationBell() {
                           <CheckCircle2 size={18} color={Colors.primary} />
                         )}
                       </View>
-                      <View style={styles.alertContent}>
-                        <Text style={styles.alertTitle}>{alert.title}</Text>
-                        <Text style={styles.alertMessage}>{alert.message}</Text>
-                        <Text style={styles.alertDate}>
+                      <View className="flex-1 gap-1">
+                        <Text className="text-sm font-bold text-appText">{alert.title}</Text>
+                        <Text className="text-[13px] text-appText-secondary leading-[18px]">{alert.message}</Text>
+                        <Text className="text-[11px] text-appText-muted mt-1">
                           {formatDate(alert.createdAt)}
                         </Text>
                       </View>
-                      {!alert.read && <View style={styles.unreadDot} />}
+                      {!alert.read && <View className="w-2 h-2 rounded-full bg-appPrimary mt-1" />}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -99,128 +90,4 @@ export function NotificationBell() {
   );
 }
 
-const styles = StyleSheet.create({
-  bellButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: Colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    backgroundColor: Colors.danger,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: Colors.background,
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: Colors.surfaceElevated,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    maxHeight: "85%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 60,
-    gap: 12,
-  },
-  emptyText: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptySub: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-    paddingHorizontal: 20,
-  },
-  alertsList: {
-    gap: 10,
-  },
-  alertCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: Colors.surface,
-  },
-  alertUnread: {
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  alertDanger: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.danger,
-  },
-  alertWarning: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.accent,
-  },
-  alertSuccess: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
-  },
-  alertIcon: {
-    marginTop: 2,
-  },
-  alertContent: {
-    flex: 1,
-    gap: 4,
-  },
-  alertTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  alertMessage: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  alertDate: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    marginTop: 4,
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-    marginTop: 4,
-  },
-});
+

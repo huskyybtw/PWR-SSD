@@ -1,5 +1,4 @@
-import {
-  BarChart3,
+import { BarChart3,
   Calendar,
   ChevronDown,
   TrendingDown,
@@ -11,7 +10,6 @@ import {
   Dimensions,
   Modal,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -51,24 +49,18 @@ function BarChart({
   barColor: string;
 }) {
   return (
-    <View style={styles.chartContainer}>
-      <View style={styles.barsRow}>
+    <View className="mb-3">
+      <View className="flex-row items-end justify-around h-[150px] gap-1">
         {data.map((item, i) => {
           const height = maxValue > 0 ? (item.value / maxValue) * 120 : 0;
           return (
-            <View key={i} style={styles.barWrapper}>
-              <View style={styles.barTrack}>
+            <View key={i} className="flex-1 items-center">
+              <View className="w-[70%] h-[120px] justify-end bg-appSurface-highlight rounded-md overflow-hidden">
                 <View
-                  style={[
-                    styles.barFill,
-                    {
-                      height: Math.max(height, 4),
-                      backgroundColor: barColor,
-                    },
-                  ]}
+                  className="w-full rounded-md min-h-[4px]" style={{ height: Math.max(height, 4), backgroundColor: barColor }}
                 />
               </View>
-              <Text style={styles.barLabel} numberOfLines={1}>
+              <Text className="text-[9px] text-appText-muted mt-1.5 text-center" numberOfLines={1}>
                 {item.label}
               </Text>
             </View>
@@ -151,84 +143,72 @@ export default function ReportsScreen() {
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Reports</Text>
-        <View style={styles.headerRight}>
+    <ScrollView className="flex-1 bg-appBackground" showsVerticalScrollIndicator={false}>
+      <View className="flex-row justify-between items-center px-5 pt-4 pb-3">
+        <Text className="text-[28px] font-[800] text-appText">Reports</Text>
+        <View className="flex-row items-center gap-[10px]">
           <TouchableOpacity
-            style={styles.rangeBtn}
+            className="flex-row items-center gap-[6px] bg-appSurface px-[14px] py-[8px] rounded-[20px] border border-appBorder"
             onPress={() => setShowRangePicker(true)}
           >
             <Calendar size={14} color={Colors.primary} />
-            <Text style={styles.rangeText}>{dateRange.label}</Text>
+            <Text className="text-[13px] font-[600] text-appPrimary">{dateRange.label}</Text>
             <ChevronDown size={14} color={Colors.primary} />
           </TouchableOpacity>
           <NotificationBell />
         </View>
       </View>
 
-      <View style={styles.statsGrid}>
+      <View className="flex-row gap-3 px-5 mb-3">
         <View
-          style={[styles.statCard, { backgroundColor: Colors.primaryMuted }]}
+          className="flex-1 rounded-2xl p-4 gap-2 bg-appPrimary-muted"
         >
           <TrendingUp size={20} color={Colors.primary} />
-          <Text style={styles.statLabel}>Income</Text>
-          <Text style={[styles.statValue, { color: Colors.primary }]}>
+          <Text className="text-[12px] text-appText-muted uppercase tracking-[0.5px]">Income</Text>
+          <Text className="text-[20px] font-[800] text-appPrimary">
             {formatCurrency(report.totalIncome)}
           </Text>
         </View>
         <View
-          style={[styles.statCard, { backgroundColor: Colors.dangerMuted }]}
+          className="flex-1 rounded-2xl p-4 gap-2 bg-appDanger-muted"
         >
           <TrendingDown size={20} color={Colors.danger} />
-          <Text style={styles.statLabel}>Expenses</Text>
-          <Text style={[styles.statValue, { color: Colors.dangerLight }]}>
+          <Text className="text-[12px] text-appText-muted uppercase tracking-[0.5px]">Expenses</Text>
+          <Text className="text-[20px] font-[800] text-appDanger-light">
             {formatCurrency(report.totalExpenses)}
           </Text>
         </View>
       </View>
 
-      <View style={styles.netCard}>
-        <Text style={styles.netLabel}>Net Balance</Text>
+      <View className="mx-5 bg-appSurface rounded-2xl p-4 flex-row justify-between items-center mb-6">
+        <Text className="text-[14px] font-[600] text-appText-secondary">Net Balance</Text>
         <Text
-          style={[
-            styles.netValue,
-            {
-              color:
-                report.netBalance >= 0 ? Colors.primary : Colors.dangerLight,
-            },
-          ]}
+          className={`text-[24px] font-[800] ${report.netBalance >= 0 ? "text-appPrimary" : "text-appDanger-light"}`}
         >
           {formatCurrency(report.netBalance)}
         </Text>
       </View>
 
       {categoryChartData.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+        <View className="mb-6 px-5">
+          <View className="flex-row items-center gap-2 mb-3">
             <BarChart3 size={18} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>Spending by Category</Text>
+            <Text className="text-[17px] font-[700] text-appText">Spending by Category</Text>
           </View>
-          <View style={styles.chartCard}>
+          <View className="bg-appSurface rounded-2xl p-4">
             <BarChart
               data={categoryChartData}
               maxValue={maxCategory}
               barColor={Colors.primary}
             />
-            <View style={styles.categoryLegend}>
+            <View className="gap-2 pt-3 border-t border-appBorder">
               {categoryChartData.map((item, i) => (
-                <View key={i} style={styles.legendRow}>
+                <View key={i} className="flex-row items-center gap-[10px]">
                   <View
-                    style={[
-                      styles.legendDot,
-                      {
-                        backgroundColor:
-                          Colors.chartColors[i % Colors.chartColors.length],
-                      },
-                    ]}
+                    className="w-[10px] h-[10px] rounded-full" style={{ backgroundColor: Colors.chartColors[i % Colors.chartColors.length] }}
                   />
-                  <Text style={styles.legendName}>{item.label}</Text>
-                  <Text style={styles.legendValue}>
+                  <Text className="flex-1 text-[13px] text-appText-secondary">{item.label}</Text>
+                  <Text className="text-[13px] font-[600] text-appText">
                     {formatCurrency(item.value)}
                   </Text>
                 </View>
@@ -239,12 +219,12 @@ export default function ReportsScreen() {
       )}
 
       {dailyChartData.length > 0 && dailyChartData.some((d) => d.value > 0) && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+        <View className="mb-6 px-5">
+          <View className="flex-row items-center gap-2 mb-3">
             <BarChart3 size={18} color={Colors.accent} />
-            <Text style={styles.sectionTitle}>Daily Spending Trend</Text>
+            <Text className="text-[17px] font-[700] text-appText">Daily Spending Trend</Text>
           </View>
-          <View style={styles.chartCard}>
+          <View className="bg-appSurface rounded-2xl p-4">
             <BarChart
               data={dailyChartData}
               maxValue={maxDaily}
@@ -255,19 +235,19 @@ export default function ReportsScreen() {
       )}
 
       {Object.keys(report.categoryBreakdown).length === 0 && (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No data for this period</Text>
-          <Text style={styles.emptySub}>Add transactions to see reports</Text>
+        <View className="items-center py-15">
+          <Text className="text-appText text-[16px] font-[600]">No data for this period</Text>
+          <Text className="text-appText-muted text-[13px] mt-1">Add transactions to see reports</Text>
         </View>
       )}
 
       <View style={{ height: 40 }} />
 
       <Modal visible={showRangePicker} animationType="fade" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Period</Text>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-[20px] font-[700] text-appText">Select Period</Text>
               <TouchableOpacity onPress={() => setShowRangePicker(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
@@ -275,20 +255,14 @@ export default function ReportsScreen() {
             {DATE_RANGES.map((r) => (
               <TouchableOpacity
                 key={r.key}
-                style={[
-                  styles.rangeOption,
-                  range === r.key && styles.rangeOptionActive,
-                ]}
+                className={`py-4 border-b border-appBorder ${range === r.key ? "bg-appPrimary-muted -mx-5 px-5" : ""}`}
                 onPress={() => {
                   setRange(r.key);
                   setShowRangePicker(false);
                 }}
               >
                 <Text
-                  style={[
-                    styles.rangeOptionText,
-                    range === r.key && styles.rangeOptionTextActive,
-                  ]}
+                  className={`text-[16px] ${range === r.key ? "text-appPrimary font-[700]" : "text-appText"}`}
                 >
                   {r.label}
                 </Text>
@@ -301,219 +275,3 @@ export default function ReportsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.text,
-  },
-  rangeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  rangeText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.primary,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  netCard: {
-    marginHorizontal: 20,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  netLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-  },
-  netValue: {
-    fontSize: 24,
-    fontWeight: "800",
-  },
-  section: {
-    marginBottom: 24,
-    paddingHorizontal: 20,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  chartCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-  },
-  chartContainer: {
-    marginBottom: 12,
-  },
-  barsRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-around",
-    height: 150,
-    gap: 4,
-  },
-  barWrapper: {
-    flex: 1,
-    alignItems: "center",
-  },
-  barTrack: {
-    width: "70%",
-    height: 120,
-    justifyContent: "flex-end",
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: 6,
-    overflow: "hidden",
-  },
-  barFill: {
-    width: "100%",
-    borderRadius: 6,
-    minHeight: 4,
-  },
-  barLabel: {
-    fontSize: 9,
-    color: Colors.textMuted,
-    marginTop: 6,
-    textAlign: "center",
-  },
-  categoryLegend: {
-    gap: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  legendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legendName: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  legendValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptySub: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    marginTop: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: Colors.surfaceElevated,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  rangeOption: {
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  rangeOptionActive: {
-    backgroundColor: Colors.primaryMuted,
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-  },
-  rangeOptionText: {
-    fontSize: 16,
-    color: Colors.text,
-  },
-  rangeOptionTextActive: {
-    color: Colors.primary,
-    fontWeight: "700",
-  },
-});

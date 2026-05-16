@@ -14,7 +14,6 @@ import {
   FlatList,
   Modal,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -72,12 +71,14 @@ export default function BudgetsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
+    <View className="flex-1 bg-appBackground">
+      <View className="px-5 pt-4 pb-3">
+        <View className="flex-row justify-between items-start">
           <View>
-            <Text style={styles.title}>Budgets</Text>
-            <Text style={styles.subtitle}>
+            <Text className="text-[28px] font-extrabold text-appText">
+              Budgets
+            </Text>
+            <Text className="text-sm text-appText-muted mt-0.5">
               Track spending against your limits
             </Text>
           </View>
@@ -91,14 +92,16 @@ export default function BudgetsScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <View style={styles.budgetCard}>
-            <View style={styles.budgetHeader}>
-              <View style={styles.budgetIcon}>
+          <View className="bg-appSurface rounded-2xl p-4 mb-3">
+            <View className="flex-row items-center gap-3 mb-3">
+              <View className="w-10 h-10 rounded-full bg-appPrimary-muted items-center justify-center">
                 <Wallet size={18} color={Colors.primary} />
               </View>
-              <View style={styles.budgetInfo}>
-                <Text style={styles.budgetName}>{item.budget.name}</Text>
-                <Text style={styles.budgetMeta}>
+              <View className="flex-1">
+                <Text className="text-[15px] font-bold text-appText">
+                  {item.budget.name}
+                </Text>
+                <Text className="text-xs text-appText-muted mt-0.5">
                   {item.budget.category} •{" "}
                   {item.budget.period.charAt(0).toUpperCase() +
                     item.budget.period.slice(1)}
@@ -120,47 +123,43 @@ export default function BudgetsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.amountRow}>
-              <Text style={styles.spentAmount}>
+            <View className="flex-row items-baseline mb-2.5">
+              <Text className="text-[22px] font-extrabold text-appText">
                 {formatCurrency(item.spent)}
               </Text>
-              <Text style={styles.limitAmount}>
+              <Text className="text-sm text-appText-muted ml-1">
                 / {formatCurrency(item.budget.amount)}
               </Text>
             </View>
 
-            <View style={styles.progressBarBg}>
+            <View className="h-2.5 bg-appSurface-highlight rounded-md overflow-hidden mb-2">
               <View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: `${Math.min(100, item.percentage)}%`,
-                    backgroundColor: item.isExceeded
-                      ? Colors.danger
-                      : item.isNearLimit
-                        ? Colors.accent
-                        : Colors.primary,
-                  },
-                ]}
+                className="h-full rounded-md"
+                style={{
+                  width: `${Math.min(100, item.percentage)}%`,
+                  backgroundColor: item.isExceeded
+                    ? Colors.danger
+                    : item.isNearLimit
+                      ? Colors.accent
+                      : Colors.primary,
+                }}
               />
             </View>
 
-            <View style={styles.budgetFooter}>
+            <View className="flex-row justify-between items-center">
               <Text
-                style={[
-                  styles.percentText,
-                  {
-                    color: item.isExceeded
-                      ? Colors.danger
-                      : item.isNearLimit
-                        ? Colors.accent
-                        : Colors.primary,
-                  },
-                ]}
+                className="text-sm font-bold"
+                style={{
+                  color: item.isExceeded
+                    ? Colors.danger
+                    : item.isNearLimit
+                      ? Colors.accent
+                      : Colors.primary,
+                }}
               >
                 {item.percentage.toFixed(0)}%
               </Text>
-              <Text style={styles.remainingText}>
+              <Text className="text-[13px] text-appText-secondary">
                 {item.isExceeded
                   ? `Over by ${formatCurrency(item.spent - item.budget.amount)}`
                   : `${formatCurrency(item.remaining)} remaining`}
@@ -169,35 +168,31 @@ export default function BudgetsScreen() {
 
             {(item.isExceeded || item.isNearLimit) && (
               <View
-                style={[
-                  styles.alertBadge,
-                  {
-                    backgroundColor: item.isExceeded
-                      ? Colors.dangerMuted
-                      : Colors.accentMuted,
-                  },
-                ]}
+                className="flex-row items-center gap-1.5 self-start px-2.5 py-1 rounded-lg mt-2.5"
+                style={{
+                  backgroundColor: item.isExceeded
+                    ? Colors.dangerMuted
+                    : Colors.accentMuted,
+                }}
               >
                 <AlertTriangle
                   size={14}
                   color={item.isExceeded ? Colors.danger : Colors.accent}
                 />
                 <Text
-                  style={[
-                    styles.alertBadgeText,
-                    {
-                      color: item.isExceeded ? Colors.danger : Colors.accent,
-                    },
-                  ]}
+                  className="text-xs font-semibold"
+                  style={{
+                    color: item.isExceeded ? Colors.danger : Colors.accent,
+                  }}
                 >
                   {item.isExceeded ? "Budget exceeded!" : "Approaching limit"}
                 </Text>
               </View>
             )}
 
-            <View style={styles.dateRow}>
+            <View className="flex-row items-center gap-1.5 mt-2.5 pt-2.5 border-t border-appBorder">
               <Calendar size={12} color={Colors.textMuted} />
-              <Text style={styles.dateText}>
+              <Text className="text-xs text-appText-muted">
                 {formatDate(item.budget.startDate)} -{" "}
                 {formatDate(item.budget.endDate)}
               </Text>
@@ -205,42 +200,51 @@ export default function BudgetsScreen() {
           </View>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No budgets yet</Text>
-            <Text style={styles.emptySub}>
+          <View className="items-center py-15">
+            <Text className="text-appText text-base font-semibold">
+              No budgets yet
+            </Text>
+            <Text className="text-appText-muted text-[13px] mt-1">
               Create a budget to start tracking spending
             </Text>
           </View>
         }
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setShowModal(true)}>
+      <TouchableOpacity
+        className="absolute right-5 bottom-6 w-14 h-14 rounded-full bg-appPrimary items-center justify-center shadow-md shadow-appPrimary elevation-5"
+        onPress={() => setShowModal(true)}
+      >
         <Plus size={24} color="#fff" />
       </TouchableOpacity>
 
       <Modal visible={showModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>New Budget</Text>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-xl font-bold text-appText">New Budget</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>Budget Name</Text>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                Budget Name
+              </Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-3.5 py-3 text-appText text-[15px] border border-appBorder"
                 placeholder="e.g. Monthly Food"
                 placeholderTextColor={Colors.textMuted}
                 value={name}
                 onChangeText={setName}
               />
 
-              <Text style={styles.inputLabel}>Amount Limit</Text>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                Amount Limit
+              </Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-3.5 py-3 text-appText text-[15px] border border-appBorder"
                 placeholder="0.00"
                 placeholderTextColor={Colors.textMuted}
                 keyboardType="decimal-pad"
@@ -248,21 +252,24 @@ export default function BudgetsScreen() {
                 onChangeText={setAmount}
               />
 
-              <Text style={styles.inputLabel}>Category</Text>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                Category
+              </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoryScroll}
+                contentContainerStyle={{ gap: 8, paddingRight: 20 }}
               >
                 {categories
                   .filter((c) => c !== "Uncategorized" && c !== "Income")
                   .map((cat) => (
                     <TouchableOpacity
                       key={cat}
-                      style={[
-                        styles.categoryChip,
-                        category === cat && styles.categoryChipActive,
-                      ]}
+                      className={`flex-row items-center gap-1.5 px-3.5 py-2 rounded-full bg-appSurface border ${
+                        category === cat
+                          ? "bg-appPrimary-muted border-appPrimary"
+                          : "border-appBorder"
+                      }`}
                       onPress={() => setCategory(cat)}
                     >
                       <Tag
@@ -272,10 +279,11 @@ export default function BudgetsScreen() {
                         }
                       />
                       <Text
-                        style={[
-                          styles.categoryChipText,
-                          category === cat && styles.categoryChipTextActive,
-                        ]}
+                        className={`text-[13px] ${
+                          category === cat
+                            ? "text-appPrimary-light font-semibold"
+                            : "text-appText-secondary"
+                        }`}
                       >
                         {cat}
                       </Text>
@@ -283,22 +291,26 @@ export default function BudgetsScreen() {
                   ))}
               </ScrollView>
 
-              <Text style={styles.inputLabel}>Period</Text>
-              <View style={styles.periodRow}>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                Period
+              </Text>
+              <View className="flex-row gap-2">
                 {PERIODS.map((p) => (
                   <TouchableOpacity
                     key={p}
-                    style={[
-                      styles.periodChip,
-                      period === p && styles.periodChipActive,
-                    ]}
+                    className={`flex-1 py-2.5 items-center rounded-xl bg-appSurface border ${
+                      period === p
+                        ? "bg-appPrimary-muted border-appPrimary"
+                        : "border-appBorder"
+                    }`}
                     onPress={() => setPeriod(p)}
                   >
                     <Text
-                      style={[
-                        styles.periodChipText,
-                        period === p && styles.periodChipTextActive,
-                      ]}
+                      className={`text-[13px] ${
+                        period === p
+                          ? "text-appPrimary-light font-semibold"
+                          : "text-appText-secondary"
+                      }`}
                     >
                       {p.charAt(0).toUpperCase() + p.slice(1)}
                     </Text>
@@ -306,26 +318,35 @@ export default function BudgetsScreen() {
                 ))}
               </View>
 
-              <Text style={styles.inputLabel}>Start Date</Text>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                Start Date
+              </Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-3.5 py-3 text-appText text-[15px] border border-appBorder"
                 value={startDate}
                 onChangeText={setStartDate}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={Colors.textMuted}
               />
 
-              <Text style={styles.inputLabel}>End Date</Text>
+              <Text className="text-[13px] font-semibold text-appText-secondary mb-2 mt-3">
+                End Date
+              </Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-3.5 py-3 text-appText text-[15px] border border-appBorder"
                 value={endDate}
                 onChangeText={setEndDate}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={Colors.textMuted}
               />
 
-              <TouchableOpacity style={styles.submitBtn} onPress={handleAdd}>
-                <Text style={styles.submitBtnText}>Create Budget</Text>
+              <TouchableOpacity
+                className="bg-appPrimary rounded-2xl py-4 items-center mt-6"
+                onPress={handleAdd}
+              >
+                <Text className="text-white text-base font-bold">
+                  Create Budget
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -334,265 +355,3 @@ export default function BudgetsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  budgetCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  budgetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
-  },
-  budgetIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  budgetInfo: {
-    flex: 1,
-  },
-  budgetName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  budgetMeta: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  amountRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    marginBottom: 10,
-  },
-  spentAmount: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: Colors.text,
-  },
-  limitAmount: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    marginLeft: 4,
-  },
-  progressBarBg: {
-    height: 10,
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: 5,
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  progressBarFill: {
-    height: "100%",
-    borderRadius: 5,
-  },
-  budgetFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  percentText: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  remainingText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  alertBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  alertBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  dateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  dateText: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptySub: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    marginTop: 4,
-  },
-  fab: {
-    position: "absolute",
-    right: 20,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: Colors.surfaceElevated,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    maxHeight: "85%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: Colors.text,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  categoryScroll: {
-    gap: 8,
-    paddingRight: 20,
-  },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  categoryChipActive: {
-    backgroundColor: Colors.primaryMuted,
-    borderColor: Colors.primary,
-  },
-  categoryChipText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  categoryChipTextActive: {
-    color: Colors.primaryLight,
-    fontWeight: "600",
-  },
-  periodRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  periodChip: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 10,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  periodChipActive: {
-    backgroundColor: Colors.primaryMuted,
-    borderColor: Colors.primary,
-  },
-  periodChipText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  periodChipTextActive: {
-    color: Colors.primaryLight,
-    fontWeight: "600",
-  },
-  submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 24,
-  },
-  submitBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});

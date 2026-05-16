@@ -1,6 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
-import {
-  ArrowDownLeft,
+import { ArrowDownLeft,
   ArrowUpRight,
   Camera,
   ChevronDown,
@@ -16,7 +15,6 @@ import {
   FlatList,
   Modal,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -168,33 +166,33 @@ export default function TransactionsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>Transactions</Text>
+    <View className="flex-1 bg-appBackground">
+      <View className="px-5 pt-4 pb-3">
+        <View className="flex-row justify-between items-start mb-3">
+          <Text className="text-[28px] font-[800] text-appText">Transactions</Text>
           <NotificationBell />
         </View>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryLabel}>Income</Text>
-            <Text style={[styles.summaryValue, { color: Colors.primary }]}>
+        <View className="flex-row gap-3">
+          <View className="flex-1 bg-appSurface rounded-2xl p-[14px]">
+            <Text className="text-[12px] text-appText-muted mb-1">Income</Text>
+            <Text className="text-[20px] font-[700] text-appPrimary">
               {formatCurrency(totalIncome)}
             </Text>
           </View>
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryLabel}>Expenses</Text>
-            <Text style={[styles.summaryValue, { color: Colors.dangerLight }]}>
+          <View className="flex-1 bg-appSurface rounded-2xl p-[14px]">
+            <Text className="text-[12px] text-appText-muted mb-1">Expenses</Text>
+            <Text className="text-[20px] font-[700] text-appDanger-light">
               {formatCurrency(totalExpenses)}
             </Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
+      <View className="flex-row items-center gap-[10px] px-5 mb-2">
+        <View className="flex-1 flex-row items-center bg-appSurface rounded-xl px-3 gap-2">
           <Search size={16} color={Colors.textMuted} />
           <TextInput
-            style={styles.searchInput}
+            className="flex-1 text-appText text-[14px] py-3"
             placeholder="Search transactions..."
             placeholderTextColor={Colors.textMuted}
             value={search}
@@ -202,10 +200,7 @@ export default function TransactionsScreen() {
           />
         </View>
         <TouchableOpacity
-          style={[
-            styles.filterBtn,
-            filterCategory && { backgroundColor: Colors.primaryMuted },
-          ]}
+          className={`w-[42px] h-[42px] rounded-xl items-center justify-center ${filterCategory ? "bg-appPrimary-muted" : "bg-appSurface"}`}
           onPress={() => setFilterCategory(null)}
         >
           <Filter
@@ -216,8 +211,8 @@ export default function TransactionsScreen() {
       </View>
 
       {filterCategory && (
-        <View style={styles.filterChip}>
-          <Text style={styles.filterChipText}>{filterCategory}</Text>
+        <View className="flex-row items-center self-start bg-appPrimary-muted rounded-[20px] px-3 py-1.5 ml-5 mb-2 gap-1.5">
+          <Text className="text-appPrimary-light text-[12px] font-[600]">{filterCategory}</Text>
           <TouchableOpacity onPress={() => setFilterCategory(null)}>
             <X size={14} color={Colors.textMuted} />
           </TouchableOpacity>
@@ -231,7 +226,7 @@ export default function TransactionsScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.txCard}
+            className="flex-row items-center gap-3 bg-appSurface rounded-[14px] p-[14px] mb-2"
             onLongPress={() => {
               Alert.alert("Delete Transaction", "Are you sure?", [
                 { text: "Cancel", style: "cancel" },
@@ -248,15 +243,7 @@ export default function TransactionsScreen() {
             }}
           >
             <View
-              style={[
-                styles.txIcon,
-                {
-                  backgroundColor:
-                    item.type === "income"
-                      ? Colors.primaryMuted
-                      : Colors.surfaceHighlight,
-                },
-              ]}
+              className={`w-[40px] h-[40px] rounded-[20px] items-center justify-center ${item.type === "income" ? "bg-appPrimary-muted" : "bg-appSurface-highlight"}`}
             >
               {item.type === "income" ? (
                 <ArrowDownLeft size={16} color={Colors.primary} />
@@ -264,19 +251,14 @@ export default function TransactionsScreen() {
                 <ArrowUpRight size={16} color={Colors.dangerLight} />
               )}
             </View>
-            <View style={styles.txInfo}>
-              <Text style={styles.txDesc}>{item.description}</Text>
-              <Text style={styles.txMeta}>
+            <View className="flex-1">
+              <Text className="text-[14px] font-[600] text-appText">{item.description}</Text>
+              <Text className="text-[12px] text-appText-muted mt-[2px]">
                 {item.category} • {formatDate(item.date)}
               </Text>
             </View>
             <Text
-              style={[
-                styles.txAmount,
-                {
-                  color: item.type === "income" ? Colors.primary : Colors.text,
-                },
-              ]}
+              className={`text-[15px] font-[700] mr-1 ${item.type === "income" ? "text-appPrimary" : "text-appText"}`}
             >
               {item.type === "income" ? "+" : "-"}
               {formatCurrency(item.amount)}
@@ -284,21 +266,21 @@ export default function TransactionsScreen() {
           </TouchableOpacity>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No transactions found</Text>
+          <View className="items-center py-15">
+            <Text className="text-appText-muted text-[14px]">No transactions found</Text>
           </View>
         }
       />
 
-      <View style={styles.fabContainer}>
+      <View className="absolute right-5 bottom-6 items-end gap-3">
         <TouchableOpacity
-          style={[styles.fab, styles.fabImport]}
+          className="w-[56px] h-[56px] rounded-full items-center justify-center elevation-5 shadow-sm shadow-black/20 bg-appSurface-elevated border border-appBorder-light"
           onPress={() => setShowImportModal(true)}
         >
           <Camera size={20} color={Colors.text} />
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.fab}
+          className="w-[56px] h-[56px] rounded-full items-center justify-center elevation-5 shadow-sm shadow-appPrimary/30 bg-appPrimary"
           onPress={() => setShowAddModal(true)}
         >
           <Plus size={24} color="#fff" />
@@ -306,54 +288,42 @@ export default function TransactionsScreen() {
       </View>
 
       <Modal visible={showAddModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Transaction</Text>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-[20px] font-[700] text-appText">Add Transaction</Text>
               <TouchableOpacity onPress={() => setShowAddModal(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.typeToggle}>
+              <View className="flex-row bg-appSurface rounded-xl p-1 mb-4">
                 <TouchableOpacity
-                  style={[
-                    styles.typeBtn,
-                    newType === "expense" && styles.typeBtnActive,
-                  ]}
+                  className={`flex-1 py-[10px] items-center rounded-[10px] ${newType === "expense" ? "bg-appSurface-elevated" : ""}`}
                   onPress={() => setNewType("expense")}
                 >
                   <Text
-                    style={[
-                      styles.typeBtnText,
-                      newType === "expense" && styles.typeBtnTextActive,
-                    ]}
+                    className={`text-[14px] font-[600] ${newType === "expense" ? "text-appText" : "text-appText-muted"}`}
                   >
                     Expense
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[
-                    styles.typeBtn,
-                    newType === "income" && styles.typeBtnActive,
-                  ]}
+                  className={`flex-1 py-[10px] items-center rounded-[10px] ${newType === "income" ? "bg-appSurface-elevated" : ""}`}
                   onPress={() => setNewType("income")}
                 >
                   <Text
-                    style={[
-                      styles.typeBtnText,
-                      newType === "income" && styles.typeBtnTextActive,
-                    ]}
+                    className={`text-[14px] font-[600] ${newType === "income" ? "text-appText" : "text-appText-muted"}`}
                   >
                     Income
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.inputLabel}>Amount</Text>
+              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">Amount</Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-[14px] py-3 text-appText text-[15px] border border-appBorder"
                 placeholder="0.00"
                 placeholderTextColor={Colors.textMuted}
                 keyboardType="decimal-pad"
@@ -361,31 +331,25 @@ export default function TransactionsScreen() {
                 onChangeText={setNewAmount}
               />
 
-              <Text style={styles.inputLabel}>Description</Text>
+              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">Description</Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-[14px] py-3 text-appText text-[15px] border border-appBorder"
                 placeholder="e.g. Grocery shopping"
                 placeholderTextColor={Colors.textMuted}
                 value={newDesc}
                 onChangeText={setNewDesc}
               />
 
-              <Text style={styles.inputLabel}>Category</Text>
-              <View style={styles.categoryGrid}>
+              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">Category</Text>
+              <View className="flex-row flex-wrap gap-2">
                 {categories.map((cat) => (
                   <TouchableOpacity
                     key={cat}
-                    style={[
-                      styles.categoryChip,
-                      newCategory === cat && styles.categoryChipActive,
-                    ]}
+                    className={`px-[14px] py-2 rounded-[20px] border ${newCategory === cat ? "bg-appPrimary-muted border-appPrimary" : "bg-appSurface border-appBorder"}`}
                     onPress={() => setNewCategory(cat)}
                   >
                     <Text
-                      style={[
-                        styles.categoryChipText,
-                        newCategory === cat && styles.categoryChipTextActive,
-                      ]}
+                      className={`text-[13px] ${newCategory === cat ? "text-appPrimary-light font-[600]" : "text-appText-secondary"}`}
                     >
                       {cat}
                     </Text>
@@ -393,9 +357,9 @@ export default function TransactionsScreen() {
                 ))}
               </View>
 
-              <Text style={styles.inputLabel}>Date</Text>
+              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">Date</Text>
               <TextInput
-                style={styles.input}
+                className="bg-appSurface rounded-xl px-[14px] py-3 text-appText text-[15px] border border-appBorder"
                 value={newDate}
                 onChangeText={setNewDate}
                 placeholder="YYYY-MM-DD"
@@ -403,10 +367,10 @@ export default function TransactionsScreen() {
               />
 
               <TouchableOpacity
-                style={styles.submitBtn}
+                className="bg-appPrimary rounded-[14px] py-4 items-center mt-6"
                 onPress={handleAddTransaction}
               >
-                <Text style={styles.submitBtnText}>Add Transaction</Text>
+                <Text className="text-white text-[16px] font-[700]">Add Transaction</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -414,33 +378,33 @@ export default function TransactionsScreen() {
       </Modal>
 
       <Modal visible={showImportModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Import Transactions</Text>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-[20px] font-[700] text-appText">Import Transactions</Text>
               <TouchableOpacity onPress={() => setShowImportModal(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
               <TouchableOpacity
-                style={styles.importImageBtn}
+                className="bg-appSurface rounded-2xl p-6 items-center border-[2px] border-appBorder border-dashed"
                 onPress={handleImportFromImage}
               >
                 <Camera size={24} color={Colors.primary} />
-                <Text style={styles.importImageText}>Import from Image</Text>
-                <Text style={styles.importImageSub}>
+                <Text className="text-[15px] font-[600] text-appText mt-2.5">Import from Image</Text>
+                <Text className="text-[12px] text-appText-muted mt-1">
                   Select a receipt or statement photo
                 </Text>
               </TouchableOpacity>
 
-              <Text style={styles.orText}>— or paste data —</Text>
+              <Text className="text-center text-appText-muted my-4 text-[13px]">— or paste data —</Text>
 
-              <Text style={styles.inputLabel}>
+              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">
                 Raw Data (CSV: amount, desc, date, type)
               </Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                className="bg-appSurface rounded-xl px-[14px] py-3 text-appText text-[15px] border border-appBorder h-[120px] pt-3 text-top"
                 multiline
                 numberOfLines={6}
                 placeholder="12.50, Starbucks, 2025-05-01, expense\n1200.00, Rent, 2025-05-01, expense"
@@ -450,10 +414,10 @@ export default function TransactionsScreen() {
               />
 
               <TouchableOpacity
-                style={styles.submitBtn}
+                className="bg-appPrimary rounded-[14px] py-4 items-center mt-6"
                 onPress={handleImportFromText}
               >
-                <Text style={styles.submitBtnText}>Import</Text>
+                <Text className="text-white text-[16px] font-[700]">Import</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -461,10 +425,10 @@ export default function TransactionsScreen() {
       </Modal>
 
       <Modal visible={showCategoryModal} animationType="fade" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Change Category</Text>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-[20px] font-[700] text-appText">Change Category</Text>
               <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
@@ -473,7 +437,7 @@ export default function TransactionsScreen() {
               {categories.map((cat) => (
                 <TouchableOpacity
                   key={cat}
-                  style={styles.categoryOption}
+                  className="flex-row justify-between items-center py-4 border-b border-appBorder-light"
                   onPress={async () => {
                     if (selectedTxId) {
                       await updateTransactionCategory(selectedTxId, cat);
@@ -481,20 +445,20 @@ export default function TransactionsScreen() {
                     setShowCategoryModal(false);
                   }}
                 >
-                  <Text style={styles.categoryOptionText}>{cat}</Text>
+                  <Text className="text-[16px] text-appText">{cat}</Text>
                   <ChevronDown size={16} color={Colors.textMuted} />
                 </TouchableOpacity>
               ))}
-              <View style={styles.addCategoryRow}>
+              <View className="flex-row gap-3 items-center mt-4">
                 <TextInput
-                  style={[styles.input, { flex: 1 }]}
+                  className="bg-appSurface rounded-xl px-[14px] py-3 text-appText text-[15px] border border-appBorder flex-1"
                   placeholder="New category..."
                   placeholderTextColor={Colors.textMuted}
                   value={newCategoryName}
                   onChangeText={setNewCategoryName}
                 />
                 <TouchableOpacity
-                  style={styles.addCategoryBtn}
+                  className="w-[46px] h-[46px] bg-appPrimary rounded-xl items-center justify-center"
                   onPress={handleAddCategory}
                 >
                   <Plus size={18} color="#fff" />
@@ -508,320 +472,3 @@ export default function TransactionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.text,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  summaryBox: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 14,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  searchBox: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: Colors.text,
-    fontSize: 14,
-    paddingVertical: 12,
-  },
-  filterBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: Colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    backgroundColor: Colors.primaryMuted,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginLeft: 20,
-    marginBottom: 8,
-    gap: 6,
-  },
-  filterChipText: {
-    color: Colors.primaryLight,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  txCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
-  },
-  txIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  txInfo: {
-    flex: 1,
-  },
-  txDesc: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  txMeta: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  txAmount: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginRight: 4,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: Colors.textMuted,
-    fontSize: 14,
-  },
-  fabContainer: {
-    position: "absolute",
-    right: 20,
-    bottom: 24,
-    alignItems: "flex-end",
-    gap: 12,
-  },
-  fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  fabImport: {
-    backgroundColor: Colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: Colors.surfaceElevated,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    maxHeight: "85%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  typeToggle: {
-    flexDirection: "row",
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  typeBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 10,
-  },
-  typeBtnActive: {
-    backgroundColor: Colors.surfaceElevated,
-  },
-  typeBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.textMuted,
-  },
-  typeBtnTextActive: {
-    color: Colors.text,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: Colors.text,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  textArea: {
-    height: 120,
-    textAlignVertical: "top",
-    paddingTop: 12,
-  },
-  categoryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  categoryChipActive: {
-    backgroundColor: Colors.primaryMuted,
-    borderColor: Colors.primary,
-  },
-  categoryChipText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  categoryChipTextActive: {
-    color: Colors.primaryLight,
-    fontWeight: "600",
-  },
-  submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 24,
-  },
-  submitBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  importImageBtn: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 24,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: Colors.border,
-    borderStyle: "dashed",
-  },
-  importImageText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: Colors.text,
-    marginTop: 10,
-  },
-  importImageSub: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 4,
-  },
-  orText: {
-    textAlign: "center",
-    color: Colors.textMuted,
-    marginVertical: 16,
-    fontSize: 13,
-  },
-  categoryOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  categoryOptionText: {
-    fontSize: 15,
-    color: Colors.text,
-  },
-  addCategoryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 16,
-  },
-  addCategoryBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

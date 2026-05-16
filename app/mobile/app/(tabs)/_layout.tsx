@@ -10,14 +10,11 @@ import {
   Wallet,
 } from "lucide-react-native";
 
-import { Colors } from "@/constants/colors";
+import { Colors } from "@/constants/Colors";
 
 export default function TabLayout() {
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: Colors.background }}
-      edges={["top"]}
-    >
+    <SafeAreaView className="flex-1 bg-appBackground" edges={["top"]}>
       <Tabs
         screenOptions={{
           headerShown: false,
