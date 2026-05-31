@@ -17,10 +17,10 @@ import {
   View,
 } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import { useFinance } from "@/app/_finance-context";
 import { NotificationBell } from "@/components/notification-bell";
-import { useFinance } from "@/lib/finance-context";
-import { formatCurrency, formatDate, formatShortDate } from "@/lib/utils";
+import { Colors } from "@/constants/colors";
+import { formatCurrency, formatShortDate } from "@/shared/utils";
 
 const { width } = Dimensions.get("window");
 
@@ -58,13 +58,15 @@ function DonutChart({
           return (
             <View
               key={i}
-              style={[
-                StyleSheet.absoluteFill,
-                {
-                  borderRadius: size / 2,
-                  overflow: "hidden",
-                },
-              ]}
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+                borderRadius: size / 2,
+                overflow: "hidden",
+              }}
             >
               <View
                 style={[
@@ -418,4 +420,3 @@ export default function DashboardScreen() {
     </ScrollView>
   );
 }
-

@@ -5,6 +5,7 @@ module.exports = function (api) {
     presets: [['babel-preset-expo'], 'nativewind/babel'],
 
     plugins: [
+      ['inline-import', { extensions: ['.sql'] }],
       [
         'module-resolver',
         {

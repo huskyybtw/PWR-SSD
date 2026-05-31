@@ -1,16 +1,10 @@
 import { AlertTriangle, Bell, CheckCircle2, X } from "lucide-react-native";
 import React, { useState } from "react";
-import {
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
+import { useFinance } from "@/app/_finance-context";
 import { Colors } from "@/constants/colors";
-import { useFinance } from "@/lib/finance-context";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "@/shared/utils";
 
 export function NotificationBell() {
   const [visible, setVisible] = useState(false);
@@ -37,7 +31,9 @@ export function NotificationBell() {
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
-              <Text className="text-xl font-bold text-appText">Notifications</Text>
+              <Text className="text-xl font-bold text-appText">
+                Notifications
+              </Text>
               <TouchableOpacity onPress={() => setVisible(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
@@ -47,7 +43,9 @@ export function NotificationBell() {
               {alerts.length === 0 ? (
                 <View className="items-center py-15 gap-3">
                   <Bell size={32} color={Colors.textMuted} />
-                  <Text className="text-appText text-base font-semibold">No notifications yet</Text>
+                  <Text className="text-appText text-base font-semibold">
+                    No notifications yet
+                  </Text>
                   <Text className="text-appText-muted text-[13px] text-center px-5">
                     Alerts about budgets and goals will appear here
                   </Text>
@@ -71,13 +69,19 @@ export function NotificationBell() {
                         )}
                       </View>
                       <View className="flex-1 gap-1">
-                        <Text className="text-sm font-bold text-appText">{alert.title}</Text>
-                        <Text className="text-[13px] text-appText-secondary leading-[18px]">{alert.message}</Text>
+                        <Text className="text-sm font-bold text-appText">
+                          {alert.title}
+                        </Text>
+                        <Text className="text-[13px] text-appText-secondary leading-[18px]">
+                          {alert.message}
+                        </Text>
                         <Text className="text-[11px] text-appText-muted mt-1">
                           {formatDate(alert.createdAt)}
                         </Text>
                       </View>
-                      {!alert.read && <View className="w-2 h-2 rounded-full bg-appPrimary mt-1" />}
+                      {!alert.read && (
+                        <View className="w-2 h-2 rounded-full bg-appPrimary mt-1" />
+                      )}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -89,5 +93,3 @@ export function NotificationBell() {
     </>
   );
 }
-
-

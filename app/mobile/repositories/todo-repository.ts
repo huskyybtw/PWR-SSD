@@ -1,25 +1,23 @@
 import { desc, eq } from "drizzle-orm";
 
-import { db } from "../lib/client";
-import { todos, type NewTodo, type Todo } from "../lib/schema";
+import { db } from "@/shared/client";
+import { NewTodo, Todo, todos } from "@/shared/schema";
 
-export function getAllTodos() {
+export function listTodos(): Todo[] {
   return db.select().from(todos).orderBy(desc(todos.createdAt)).all();
 }
 
-export function createTodo(values: NewTodo) {
+export function createTodo(values: NewTodo): Todo[] {
   db.insert(todos).values(values).run();
-  return getAllTodos();
+  return listTodos();
 }
 
-export function toggleTodo(id: number, completed: boolean) {
+export function updateTodoCompleted(id: number, completed: boolean): Todo[] {
   db.update(todos).set({ completed }).where(eq(todos.id, id)).run();
-  return getAllTodos();
+  return listTodos();
 }
 
-export function deleteTodo(id: number) {
+export function deleteTodo(id: number): Todo[] {
   db.delete(todos).where(eq(todos.id, id)).run();
-  return getAllTodos();
+  return listTodos();
 }
-
-export type { Todo };

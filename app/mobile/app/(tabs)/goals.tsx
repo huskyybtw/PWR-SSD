@@ -19,10 +19,10 @@ import {
   View,
 } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import { useFinance } from "@/app/_finance-context";
 import { NotificationBell } from "@/components/notification-bell";
-import { useFinance } from "@/lib/finance-context";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { Colors } from "@/constants/colors";
+import { formatCurrency, formatDate } from "@/shared/utils";
 
 export default function GoalsScreen() {
   const { goals, getGoalProgresses, addGoal, updateGoalAmount, deleteGoal } =

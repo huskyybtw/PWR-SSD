@@ -1,4 +1,5 @@
-import { BarChart3,
+import {
+  BarChart3,
   Calendar,
   ChevronDown,
   TrendingDown,
@@ -15,10 +16,10 @@ import {
   View,
 } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import { useFinance } from "@/app/_finance-context";
 import { NotificationBell } from "@/components/notification-bell";
-import { useFinance } from "@/lib/finance-context";
-import { formatCurrency, formatShortDate } from "@/lib/utils";
+import { Colors } from "@/constants/colors";
+import { formatCurrency, formatShortDate } from "@/shared/utils";
 import {
   endOfMonth,
   endOfWeek,
@@ -27,7 +28,6 @@ import {
   startOfMonth,
   startOfWeek,
   startOfYear,
-  subDays,
 } from "date-fns";
 
 const { width } = Dimensions.get("window");
@@ -57,10 +57,17 @@ function BarChart({
             <View key={i} className="flex-1 items-center">
               <View className="w-[70%] h-[120px] justify-end bg-appSurface-highlight rounded-md overflow-hidden">
                 <View
-                  className="w-full rounded-md min-h-[4px]" style={{ height: Math.max(height, 4), backgroundColor: barColor }}
+                  className="w-full rounded-md min-h-[4px]"
+                  style={{
+                    height: Math.max(height, 4),
+                    backgroundColor: barColor,
+                  }}
                 />
               </View>
-              <Text className="text-[9px] text-appText-muted mt-1.5 text-center" numberOfLines={1}>
+              <Text
+                className="text-[9px] text-appText-muted mt-1.5 text-center"
+                numberOfLines={1}
+              >
                 {item.label}
               </Text>
             </View>
@@ -143,7 +150,10 @@ export default function ReportsScreen() {
   );
 
   return (
-    <ScrollView className="flex-1 bg-appBackground" showsVerticalScrollIndicator={false}>
+    <ScrollView
+      className="flex-1 bg-appBackground"
+      showsVerticalScrollIndicator={false}
+    >
       <View className="flex-row justify-between items-center px-5 pt-4 pb-3">
         <Text className="text-[28px] font-[800] text-appText">Reports</Text>
         <View className="flex-row items-center gap-[10px]">
@@ -152,7 +162,9 @@ export default function ReportsScreen() {
             onPress={() => setShowRangePicker(true)}
           >
             <Calendar size={14} color={Colors.primary} />
-            <Text className="text-[13px] font-[600] text-appPrimary">{dateRange.label}</Text>
+            <Text className="text-[13px] font-[600] text-appPrimary">
+              {dateRange.label}
+            </Text>
             <ChevronDown size={14} color={Colors.primary} />
           </TouchableOpacity>
           <NotificationBell />
@@ -160,20 +172,20 @@ export default function ReportsScreen() {
       </View>
 
       <View className="flex-row gap-3 px-5 mb-3">
-        <View
-          className="flex-1 rounded-2xl p-4 gap-2 bg-appPrimary-muted"
-        >
+        <View className="flex-1 rounded-2xl p-4 gap-2 bg-appPrimary-muted">
           <TrendingUp size={20} color={Colors.primary} />
-          <Text className="text-[12px] text-appText-muted uppercase tracking-[0.5px]">Income</Text>
+          <Text className="text-[12px] text-appText-muted uppercase tracking-[0.5px]">
+            Income
+          </Text>
           <Text className="text-[20px] font-[800] text-appPrimary">
             {formatCurrency(report.totalIncome)}
           </Text>
         </View>
-        <View
-          className="flex-1 rounded-2xl p-4 gap-2 bg-appDanger-muted"
-        >
+        <View className="flex-1 rounded-2xl p-4 gap-2 bg-appDanger-muted">
           <TrendingDown size={20} color={Colors.danger} />
-          <Text className="text-[12px] text-appText-muted uppercase tracking-[0.5px]">Expenses</Text>
+          <Text className="text-[12px] text-appText-muted uppercase tracking-[0.5px]">
+            Expenses
+          </Text>
           <Text className="text-[20px] font-[800] text-appDanger-light">
             {formatCurrency(report.totalExpenses)}
           </Text>
@@ -181,7 +193,9 @@ export default function ReportsScreen() {
       </View>
 
       <View className="mx-5 bg-appSurface rounded-2xl p-4 flex-row justify-between items-center mb-6">
-        <Text className="text-[14px] font-[600] text-appText-secondary">Net Balance</Text>
+        <Text className="text-[14px] font-[600] text-appText-secondary">
+          Net Balance
+        </Text>
         <Text
           className={`text-[24px] font-[800] ${report.netBalance >= 0 ? "text-appPrimary" : "text-appDanger-light"}`}
         >
@@ -193,7 +207,9 @@ export default function ReportsScreen() {
         <View className="mb-6 px-5">
           <View className="flex-row items-center gap-2 mb-3">
             <BarChart3 size={18} color={Colors.primary} />
-            <Text className="text-[17px] font-[700] text-appText">Spending by Category</Text>
+            <Text className="text-[17px] font-[700] text-appText">
+              Spending by Category
+            </Text>
           </View>
           <View className="bg-appSurface rounded-2xl p-4">
             <BarChart
@@ -205,9 +221,15 @@ export default function ReportsScreen() {
               {categoryChartData.map((item, i) => (
                 <View key={i} className="flex-row items-center gap-[10px]">
                   <View
-                    className="w-[10px] h-[10px] rounded-full" style={{ backgroundColor: Colors.chartColors[i % Colors.chartColors.length] }}
+                    className="w-[10px] h-[10px] rounded-full"
+                    style={{
+                      backgroundColor:
+                        Colors.chartColors[i % Colors.chartColors.length],
+                    }}
                   />
-                  <Text className="flex-1 text-[13px] text-appText-secondary">{item.label}</Text>
+                  <Text className="flex-1 text-[13px] text-appText-secondary">
+                    {item.label}
+                  </Text>
                   <Text className="text-[13px] font-[600] text-appText">
                     {formatCurrency(item.value)}
                   </Text>
@@ -222,7 +244,9 @@ export default function ReportsScreen() {
         <View className="mb-6 px-5">
           <View className="flex-row items-center gap-2 mb-3">
             <BarChart3 size={18} color={Colors.accent} />
-            <Text className="text-[17px] font-[700] text-appText">Daily Spending Trend</Text>
+            <Text className="text-[17px] font-[700] text-appText">
+              Daily Spending Trend
+            </Text>
           </View>
           <View className="bg-appSurface rounded-2xl p-4">
             <BarChart
@@ -236,8 +260,12 @@ export default function ReportsScreen() {
 
       {Object.keys(report.categoryBreakdown).length === 0 && (
         <View className="items-center py-15">
-          <Text className="text-appText text-[16px] font-[600]">No data for this period</Text>
-          <Text className="text-appText-muted text-[13px] mt-1">Add transactions to see reports</Text>
+          <Text className="text-appText text-[16px] font-[600]">
+            No data for this period
+          </Text>
+          <Text className="text-appText-muted text-[13px] mt-1">
+            Add transactions to see reports
+          </Text>
         </View>
       )}
 
@@ -247,7 +275,9 @@ export default function ReportsScreen() {
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10">
             <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-[20px] font-[700] text-appText">Select Period</Text>
+              <Text className="text-[20px] font-[700] text-appText">
+                Select Period
+              </Text>
               <TouchableOpacity onPress={() => setShowRangePicker(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
@@ -274,4 +304,3 @@ export default function ReportsScreen() {
     </ScrollView>
   );
 }
-

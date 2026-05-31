@@ -1,4 +1,4 @@
-import { CategoryKeywordMap } from "@/types/finance";
+import { CategoryKeywordMap } from "@/shared/types/finance";
 
 export const DEFAULT_CATEGORIES = [
   "Food",
@@ -122,4 +122,22 @@ export function autoCategorize(description: string): string {
   }
 
   return "Uncategorized";
+}
+
+let categoriesStore: string[] = [...DEFAULT_CATEGORIES];
+
+export async function listCategories(): Promise<string[]> {
+  return [...categoriesStore];
+}
+
+export async function addCategory(value: string): Promise<void> {
+  if (categoriesStore.includes(value)) {
+    return;
+  }
+
+  categoriesStore = [...categoriesStore, value];
+}
+
+export async function replaceCategories(value: string[]): Promise<void> {
+  categoriesStore = [...value];
 }

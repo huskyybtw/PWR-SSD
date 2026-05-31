@@ -1,12 +1,12 @@
 import * as ImagePicker from "expo-image-picker";
-import { ArrowDownLeft,
+import {
+  ArrowDownLeft,
   ArrowUpRight,
   Camera,
   ChevronDown,
   Filter,
   Plus,
   Search,
-  Trash2,
   X,
 } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
@@ -21,10 +21,10 @@ import {
   View,
 } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import { useFinance } from "@/app/_finance-context";
 import { NotificationBell } from "@/components/notification-bell";
-import { useFinance } from "@/lib/finance-context";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { Colors } from "@/constants/colors";
+import { formatCurrency, formatDate } from "@/shared/utils";
 
 export default function TransactionsScreen() {
   const {
@@ -169,7 +169,9 @@ export default function TransactionsScreen() {
     <View className="flex-1 bg-appBackground">
       <View className="px-5 pt-4 pb-3">
         <View className="flex-row justify-between items-start mb-3">
-          <Text className="text-[28px] font-[800] text-appText">Transactions</Text>
+          <Text className="text-[28px] font-[800] text-appText">
+            Transactions
+          </Text>
           <NotificationBell />
         </View>
         <View className="flex-row gap-3">
@@ -180,7 +182,9 @@ export default function TransactionsScreen() {
             </Text>
           </View>
           <View className="flex-1 bg-appSurface rounded-2xl p-[14px]">
-            <Text className="text-[12px] text-appText-muted mb-1">Expenses</Text>
+            <Text className="text-[12px] text-appText-muted mb-1">
+              Expenses
+            </Text>
             <Text className="text-[20px] font-[700] text-appDanger-light">
               {formatCurrency(totalExpenses)}
             </Text>
@@ -212,7 +216,9 @@ export default function TransactionsScreen() {
 
       {filterCategory && (
         <View className="flex-row items-center self-start bg-appPrimary-muted rounded-[20px] px-3 py-1.5 ml-5 mb-2 gap-1.5">
-          <Text className="text-appPrimary-light text-[12px] font-[600]">{filterCategory}</Text>
+          <Text className="text-appPrimary-light text-[12px] font-[600]">
+            {filterCategory}
+          </Text>
           <TouchableOpacity onPress={() => setFilterCategory(null)}>
             <X size={14} color={Colors.textMuted} />
           </TouchableOpacity>
@@ -252,7 +258,9 @@ export default function TransactionsScreen() {
               )}
             </View>
             <View className="flex-1">
-              <Text className="text-[14px] font-[600] text-appText">{item.description}</Text>
+              <Text className="text-[14px] font-[600] text-appText">
+                {item.description}
+              </Text>
               <Text className="text-[12px] text-appText-muted mt-[2px]">
                 {item.category} • {formatDate(item.date)}
               </Text>
@@ -267,7 +275,9 @@ export default function TransactionsScreen() {
         )}
         ListEmptyComponent={
           <View className="items-center py-15">
-            <Text className="text-appText-muted text-[14px]">No transactions found</Text>
+            <Text className="text-appText-muted text-[14px]">
+              No transactions found
+            </Text>
           </View>
         }
       />
@@ -291,7 +301,9 @@ export default function TransactionsScreen() {
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
-              <Text className="text-[20px] font-[700] text-appText">Add Transaction</Text>
+              <Text className="text-[20px] font-[700] text-appText">
+                Add Transaction
+              </Text>
               <TouchableOpacity onPress={() => setShowAddModal(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
@@ -321,7 +333,9 @@ export default function TransactionsScreen() {
                 </TouchableOpacity>
               </View>
 
-              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">Amount</Text>
+              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">
+                Amount
+              </Text>
               <TextInput
                 className="bg-appSurface rounded-xl px-[14px] py-3 text-appText text-[15px] border border-appBorder"
                 placeholder="0.00"
@@ -331,7 +345,9 @@ export default function TransactionsScreen() {
                 onChangeText={setNewAmount}
               />
 
-              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">Description</Text>
+              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">
+                Description
+              </Text>
               <TextInput
                 className="bg-appSurface rounded-xl px-[14px] py-3 text-appText text-[15px] border border-appBorder"
                 placeholder="e.g. Grocery shopping"
@@ -340,7 +356,9 @@ export default function TransactionsScreen() {
                 onChangeText={setNewDesc}
               />
 
-              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">Category</Text>
+              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">
+                Category
+              </Text>
               <View className="flex-row flex-wrap gap-2">
                 {categories.map((cat) => (
                   <TouchableOpacity
@@ -357,7 +375,9 @@ export default function TransactionsScreen() {
                 ))}
               </View>
 
-              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">Date</Text>
+              <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">
+                Date
+              </Text>
               <TextInput
                 className="bg-appSurface rounded-xl px-[14px] py-3 text-appText text-[15px] border border-appBorder"
                 value={newDate}
@@ -370,7 +390,9 @@ export default function TransactionsScreen() {
                 className="bg-appPrimary rounded-[14px] py-4 items-center mt-6"
                 onPress={handleAddTransaction}
               >
-                <Text className="text-white text-[16px] font-[700]">Add Transaction</Text>
+                <Text className="text-white text-[16px] font-[700]">
+                  Add Transaction
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -381,7 +403,9 @@ export default function TransactionsScreen() {
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
-              <Text className="text-[20px] font-[700] text-appText">Import Transactions</Text>
+              <Text className="text-[20px] font-[700] text-appText">
+                Import Transactions
+              </Text>
               <TouchableOpacity onPress={() => setShowImportModal(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
@@ -392,13 +416,17 @@ export default function TransactionsScreen() {
                 onPress={handleImportFromImage}
               >
                 <Camera size={24} color={Colors.primary} />
-                <Text className="text-[15px] font-[600] text-appText mt-2.5">Import from Image</Text>
+                <Text className="text-[15px] font-[600] text-appText mt-2.5">
+                  Import from Image
+                </Text>
                 <Text className="text-[12px] text-appText-muted mt-1">
                   Select a receipt or statement photo
                 </Text>
               </TouchableOpacity>
 
-              <Text className="text-center text-appText-muted my-4 text-[13px]">— or paste data —</Text>
+              <Text className="text-center text-appText-muted my-4 text-[13px]">
+                — or paste data —
+              </Text>
 
               <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">
                 Raw Data (CSV: amount, desc, date, type)
@@ -417,7 +445,9 @@ export default function TransactionsScreen() {
                 className="bg-appPrimary rounded-[14px] py-4 items-center mt-6"
                 onPress={handleImportFromText}
               >
-                <Text className="text-white text-[16px] font-[700]">Import</Text>
+                <Text className="text-white text-[16px] font-[700]">
+                  Import
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -428,7 +458,9 @@ export default function TransactionsScreen() {
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
-              <Text className="text-[20px] font-[700] text-appText">Change Category</Text>
+              <Text className="text-[20px] font-[700] text-appText">
+                Change Category
+              </Text>
               <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
@@ -471,4 +503,3 @@ export default function TransactionsScreen() {
     </View>
   );
 }
-

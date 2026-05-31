@@ -5,8 +5,9 @@ import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { Colors } from "@/constants/colors";
-import { FinanceProvider } from "@/lib/finance-context";
+import { FinanceProvider } from "@/app/_finance-context";
+import { initDatabase } from "@/shared/client";
+import "../global.css";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,7 +23,17 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
-    SplashScreen.hideAsync();
+    async function bootstrap() {
+      try {
+        await initDatabase();
+      } catch (error) {
+        console.error("Database init failed", error);
+      } finally {
+        await SplashScreen.hideAsync();
+      }
+    }
+
+    bootstrap();
   }, []);
 
   return (

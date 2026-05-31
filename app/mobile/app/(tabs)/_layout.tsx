@@ -1,7 +1,4 @@
 import { Tabs } from "expo-router";
-import React from "react";
-import { Platform } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ArrowRightLeft,
   BarChart3,
@@ -9,12 +6,20 @@ import {
   Target,
   Wallet,
 } from "lucide-react-native";
+import React from "react";
+import { Platform, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Colors } from "@/constants/Colors";
+import { Colors } from "@/constants/colors";
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView className="flex-1 bg-appBackground" edges={["top"]}>
+    <View
+      className="bg-appBackground"
+      style={{ flex: 1, paddingTop: insets.top }}
+    >
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -71,6 +76,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </SafeAreaView>
+    </View>
   );
 }
