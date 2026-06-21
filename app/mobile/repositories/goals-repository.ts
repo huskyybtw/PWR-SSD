@@ -7,6 +7,17 @@ export async function listGoals(): Promise<SavingsGoal[]> {
 }
 
 export async function createGoal(value: SavingsGoal): Promise<void> {
+  // 1. Tarcza na puste dane
+  if (!value.name || value.targetAmount === undefined || !value.deadline) {
+    throw new Error("Invalid user input");
+  }
+
+  // 2. Tarcza na duplikaty
+  const existingGoal = goalsStore.find((goal) => goal.id === value.id);
+  if (existingGoal) {
+    throw new Error("Goal with this ID already exists");
+  }
+
   goalsStore = [...goalsStore, value];
 }
 
