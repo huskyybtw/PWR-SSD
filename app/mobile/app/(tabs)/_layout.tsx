@@ -10,7 +10,7 @@ import React from "react";
 import { Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Colors } from "@/constants/colors";
+import { Colors } from "@/constants/Colors";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();

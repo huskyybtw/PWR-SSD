@@ -23,7 +23,7 @@ import {
 
 import { useFinance } from "@/app/_finance-context";
 import { NotificationBell } from "@/components/notification-bell";
-import { Colors } from "@/constants/colors";
+import { Colors } from "@/constants/Colors";
 import { formatCurrency, formatDate } from "@/shared/utils";
 
 export default function TransactionsScreen() {
