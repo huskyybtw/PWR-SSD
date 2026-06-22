@@ -30,3 +30,18 @@ export const goals = sqliteTable("goals", {
 // Tworzymy typy, żeby TypeScript nam pomagał w innych plikach
 export type Goal = typeof goals.$inferSelect;
 export type NewGoal = typeof goals.$inferInsert;
+
+// --- NOWA TABELA: ALERTY (ALERTS) ---
+export const alerts = sqliteTable("alerts", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  read: integer("read", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export type AlertMessage = typeof alerts.$inferSelect;
+export type NewAlertMessage = typeof alerts.$inferInsert;
