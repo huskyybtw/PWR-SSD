@@ -51,7 +51,18 @@ export async function updateGoalAmount(
 }
 
 export async function deleteGoal(goalId: string): Promise<void> {
-  // Usunięcie rekordu o podanym ID z twardego dysku
+  // 1. Najpierw sprawdzamy, czy cel w ogóle istnieje
+  const existingGoal = db
+    .select()
+    .from(goals)
+    .where(eq(goals.id, goalId))
+    .get();
+
+  if (!existingGoal) {
+    throw new Error("Goal not found");
+  }
+
+  // 2. Jeśli istnieje, bezpiecznie go usuwamy
   db.delete(goals).where(eq(goals.id, goalId)).run();
 }
 
