@@ -5,5 +5,3 @@ https://politechnikawroclawska-my.sharepoint.com/personal/273102_student_pwr_edu
 
 @nkzw/create-context-hook
 @react-native-async-storage/async-storage
-
-dobra coś pisze jest okey bla bla bla
