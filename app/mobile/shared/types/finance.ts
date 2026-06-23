@@ -9,6 +9,7 @@ export interface Transaction {
   type: TransactionType;
   createdAt: string;
   source?: "manual" | "import";
+  goalId?: string;
 }
 
 export interface Budget {
