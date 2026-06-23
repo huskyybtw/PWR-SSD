@@ -1,3 +1,7 @@
+import { eq } from "drizzle-orm";
+
+import { db } from "@/shared/client";
+import { categories } from "@/shared/schema";
 import { CategoryKeywordMap } from "@/shared/types/finance";
 
 export const DEFAULT_CATEGORIES = [
@@ -124,20 +128,58 @@ export function autoCategorize(description: string): string {
   return "Uncategorized";
 }
 
-let categoriesStore: string[] = [...DEFAULT_CATEGORIES];
-
 export async function listCategories(): Promise<string[]> {
-  return [...categoriesStore];
+  const rows = await db.select().from(categories).all();
+
+  if (rows.length === 0) {
+    await replaceCategories(DEFAULT_CATEGORIES);
+    return [...DEFAULT_CATEGORIES];
+  }
+
+  return rows.map((category) => category.name);
 }
 
 export async function addCategory(value: string): Promise<void> {
-  if (categoriesStore.includes(value)) {
+  const name = value.trim();
+
+  if (!name) {
+    throw new Error("Category name cannot be empty.");
+  }
+
+  const existingCategory = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.name, name))
+    .get();
+
+  if (existingCategory) {
     return;
   }
 
-  categoriesStore = [...categoriesStore, value];
+  await db.insert(categories).values({ name }).run();
 }
 
 export async function replaceCategories(value: string[]): Promise<void> {
-  categoriesStore = [...value];
+  await db.delete(categories).run();
+
+  const uniqueCategories = Array.from(
+    new Set(value.map((category) => category.trim()).filter(Boolean)),
+  );
+
+  if (uniqueCategories.length > 0) {
+    await db
+      .insert(categories)
+      .values(uniqueCategories.map((name) => ({ name })))
+      .run();
+  }
+}
+
+export async function categoryExists(value: string): Promise<boolean> {
+  const existingCategory = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.name, value))
+    .get();
+
+  return Boolean(existingCategory);
 }

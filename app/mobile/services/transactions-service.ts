@@ -4,6 +4,7 @@ import {
   autoCategorize,
   DEFAULT_CATEGORIES,
 } from "@/repositories/categories-repository";
+import { listGoals, updateGoalAmount } from "@/repositories/goals-repository";
 import {
   createTransaction,
   deleteTransaction,
@@ -41,12 +42,9 @@ if (!apiKey) {
   );
 }
 
-console.log(apiKey);
 const ai = new GoogleGenAI({
   apiKey: cleanKey,
 });
-
-console.log(ai);
 
 export function useTransactionsService() {
   const [transactions, setLocalTransactions] = useState<Transaction[]>([]);
@@ -106,7 +104,20 @@ export function useTransactionsService() {
       const next = [newTx, ...transactions];
       setLocalTransactions(next);
       await createTransaction(newTx);
+try {
+  const goals = await listGoals();
 
+  for (const goal of goals) {
+    const nextAmount =
+      newTx.type === "income"
+        ? goal.currentAmount + newTx.amount
+        : Math.max(0, goal.currentAmount - newTx.amount);
+
+    await updateGoalAmount(goal.id, nextAmount);
+  }
+} catch (e) {
+  console.error("Goal update failed", e);
+}
       // Orchestration: check budgets and create alerts when limits are reached
       try {
         const budgets = await listBudgets();
