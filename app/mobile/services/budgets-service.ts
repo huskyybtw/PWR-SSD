@@ -59,6 +59,18 @@ export function useBudgetsService() {
         throw new Error("Start date must be before end date.");
       }
 
+      const duplicate = budgets.some(
+        (budget) =>
+          budget.category === data.category &&
+          budget.period === data.period &&
+          budget.startDate === data.startDate &&
+          budget.endDate === data.endDate,
+      );
+
+      if (duplicate) {
+        throw new Error("A budget for this category and period already exists.");
+      }
+
       const newBudget: Budget = {
         ...data,
         id: generateId(),
