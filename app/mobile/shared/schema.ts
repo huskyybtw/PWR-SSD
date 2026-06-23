@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, real } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // --- TABELA ZADAŃ (TODO) - zostawiamy bez zmian ---
 export const todos = sqliteTable("todos", {
@@ -30,6 +30,24 @@ export const goals = sqliteTable("goals", {
 // Tworzymy typy, żeby TypeScript nam pomagał w innych plikach
 export type Goal = typeof goals.$inferSelect;
 export type NewGoal = typeof goals.$inferInsert;
+
+
+// --- NOWA TABELA: BUDŻETY (BUDGETS) ---
+export const budgets = sqliteTable("budgets", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  amount: real("amount").notNull(),
+  category: text("category").notNull(),
+  period: text("period").notNull(),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export type Budget = typeof budgets.$inferSelect;
+export type NewBudget = typeof budgets.$inferInsert;
 
 // --- NOWA TABELA: ALERTY (ALERTS) ---
 export const alerts = sqliteTable("alerts", {
