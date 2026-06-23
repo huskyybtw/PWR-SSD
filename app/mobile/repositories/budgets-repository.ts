@@ -9,6 +9,28 @@ export async function listBudgets(): Promise<Budget[]> {
 }
 
 export async function createBudget(value: Budget): Promise<void> {
+  if (
+    !value.name ||
+    value.amount === undefined ||
+    value.amount <= 0 ||
+    !value.category ||
+    !value.period ||
+    !value.startDate ||
+    !value.endDate
+  ) {
+    throw new Error("Invalid user input");
+  }
+
+  const existingBudget = await db
+    .select()
+    .from(budgets)
+    .where(eq(budgets.id, value.id))
+    .get();
+
+  if (existingBudget) {
+    throw new Error("Budget with this ID already exists");
+  }
+
   await db.insert(budgets).values(value).run();
 }
 
