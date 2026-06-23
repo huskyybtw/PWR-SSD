@@ -1,15 +1,34 @@
 export type TransactionType = "expense" | "income";
 
 export interface Transaction {
-  id: string;
+  id: number;
+  log_id?: number;
+  categoryId: number; // Prawdziwy łącznik
   amount: number;
-  description: string;
   date: string;
-  category: string;
-  type: TransactionType;
-  createdAt: string;
-  source?: "manual" | "import";
-  goalId?: string;
+  description?: string;
+}
+
+// Zunifikowany i jedyny potrzebny interfejs celu finansowego (zgodny z DB)
+export interface FinancialGoal {
+  id: string; // Zakładam string dla frontendu (generateId), podczas zapisu do DB backend rzutuje lub mapuje na INTEGER
+  userId: number | string;
+  goalType: "saving" | "budget"; // Doprecyzowanie typu celu
+  categoryId: number; // Łącznik z transakcją
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  startDate: string;
+  endDate: string; // Zastępuje stare 'deadline'
+  alertMessage?: string;
+  createdAt?: string;
+}
+
+export interface GoalProgress {
+  goal: FinancialGoal; // Zmiana z SavingsGoal na FinancialGoal
+  percentage: number;
+  isAchieved: boolean;
+  daysRemaining: number;
 }
 
 export interface Budget {
@@ -30,22 +49,6 @@ export interface BudgetStatus {
   percentage: number;
   isExceeded: boolean;
   isNearLimit: boolean;
-}
-
-export interface SavingsGoal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  currentAmount: number;
-  deadline: string;
-  createdAt: string;
-}
-
-export interface GoalProgress {
-  goal: SavingsGoal;
-  percentage: number;
-  isAchieved: boolean;
-  daysRemaining: number;
 }
 
 export interface AlertMessage {
