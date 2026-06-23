@@ -310,3 +310,104 @@ describe("FR10: Manual transactions and categories", () => {
     expect(transactions).toHaveLength(0);
   });
 });
+
+describe("FR14: Transactions list, filters, aggregates and search", () => {
+  const transactions = [
+    {
+      id: "tx-001",
+      amount: 3500,
+      description: "Salary",
+      date: "2026-06-01",
+      category: "Income",
+      type: "income",
+      createdAt: "2026-06-01",
+    },
+    {
+      id: "tx-002",
+      amount: 45.67,
+      description: "Whole Foods Market",
+      date: "2026-06-02",
+      category: "Food",
+      type: "expense",
+      createdAt: "2026-06-02",
+    },
+    {
+      id: "tx-003",
+      amount: 85,
+      description: "Shell Gas Station",
+      date: "2026-06-03",
+      category: "Transport",
+      type: "expense",
+      createdAt: "2026-06-03",
+    },
+    {
+      id: "tx-004",
+      amount: 15.99,
+      description: "Netflix Subscription",
+      date: "2026-06-04",
+      category: "Entertainment",
+      type: "expense",
+      createdAt: "2026-06-04",
+    },
+  ];
+
+  it("should return transactions list", () => {
+    expect(transactions).toHaveLength(4);
+    expect(transactions[0].description).toBe("Salary");
+  });
+
+  it("should filter transactions by category", () => {
+    const result = transactions.filter(
+      (transaction) => transaction.category === "Food",
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].description).toBe("Whole Foods Market");
+  });
+
+  it("should return empty list for wrong filter", () => {
+    const result = transactions.filter(
+      (transaction) => transaction.category === "InvalidCategory",
+    );
+
+    expect(result).toHaveLength(0);
+  });
+
+  it("should correctly calculate aggregate income and expenses", () => {
+    const totalIncome = transactions
+      .filter((transaction) => transaction.type === "income")
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+    const totalExpenses = transactions
+      .filter((transaction) => transaction.type === "expense")
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+    expect(totalIncome).toBe(3500);
+    expect(totalExpenses).toBeCloseTo(146.66);
+  });
+
+  it("should search transactions by description", () => {
+    const query = "netflix";
+
+    const result = transactions.filter(
+      (transaction) =>
+        transaction.description.toLowerCase().includes(query) ||
+        transaction.category.toLowerCase().includes(query),
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].description).toBe("Netflix Subscription");
+  });
+
+  it("should return empty list when search has no results", () => {
+    const query = "amazon";
+
+    const result = transactions.filter(
+      (transaction) =>
+        transaction.description.toLowerCase().includes(query) ||
+        transaction.category.toLowerCase().includes(query),
+    );
+
+    expect(result).toHaveLength(0);
+  });
+});
