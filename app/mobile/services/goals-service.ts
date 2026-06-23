@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-
 import {
   createGoal,
   deleteGoal,
@@ -7,12 +6,16 @@ import {
   replaceGoals,
   updateGoalAmount,
 } from "@/repositories/goals-repository";
-import { GoalProgress, SavingsGoal } from "@/shared/types/finance";
+import {
+  GoalProgress,
+  FinancialGoal,
+  Transaction,
+} from "@/shared/types/finance";
 import { generateId } from "@/shared/utils";
 import { isValid, parseISO } from "date-fns";
 
 export function useGoalsService() {
-  const [goals, setLocalGoals] = useState<SavingsGoal[]>([]);
+  const [goals, setLocalGoals] = useState<FinancialGoal[]>([]);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -41,18 +44,21 @@ export function useGoalsService() {
   }, []);
 
   const addGoal = useCallback(
-    async (data: Omit<SavingsGoal, "id" | "createdAt" | "currentAmount">) => {
-      const start = parseISO(data.deadline);
-      if (!isValid(start)) {
-        throw new Error("Invalid deadline date.");
+    async (data: Omit<FinancialGoal, "id" | "createdAt" | "currentAmount">) => {
+      const start = parseISO(data.startDate);
+      const end = parseISO(data.endDate);
+
+      if (!isValid(start) || !isValid(end)) {
+        throw new Error("Invalid start or end date.");
       }
 
-      const newGoal: SavingsGoal = {
+      const newGoal: FinancialGoal = {
         ...data,
         id: generateId(),
         currentAmount: 0,
         createdAt: new Date().toISOString(),
       };
+
       const next = [...goals, newGoal];
       setLocalGoals(next);
       await createGoal(newGoal);
@@ -70,6 +76,7 @@ export function useGoalsService() {
       const next = goals.map((candidate) =>
         candidate.id === goalId ? updatedGoal : candidate,
       );
+
       setLocalGoals(next);
       await updateGoalAmount(goalId, amount);
 
@@ -87,15 +94,17 @@ export function useGoalsService() {
     [goals],
   );
 
-  function getGoalProgress(goal: SavingsGoal): GoalProgress {
+  // Zaktualizowana funkcja kalkulacji uwzględniająca endDate
+  function getGoalProgress(goal: FinancialGoal): GoalProgress {
     const percentage =
       goal.targetAmount > 0
         ? Math.min(100, (goal.currentAmount / goal.targetAmount) * 100)
         : 0;
+
     const daysRemaining = Math.max(
       0,
       Math.ceil(
-        (parseISO(goal.deadline).getTime() - new Date().getTime()) /
+        (parseISO(goal.endDate).getTime() - new Date().getTime()) /
           (1000 * 60 * 60 * 24),
       ),
     );
@@ -112,6 +121,34 @@ export function useGoalsService() {
     return goals.map((goal) => getGoalProgress(goal));
   }
 
+  // NOWOŚĆ: Logika przetwarzająca transakcję dla celów
+  const processTransactionForGoals = useCallback(
+    async (transaction: Transaction) => {
+      const transactionDate = parseISO(transaction.date).getTime();
+
+      // Szukamy celów z tą samą kategorią, które pokrywają się datą z transakcją
+      const affectedGoals = goals.filter((goal) => {
+        const start = parseISO(goal.startDate).getTime();
+        const end = parseISO(goal.endDate).getTime();
+
+        return (
+          goal.categoryId === transaction.categoryId &&
+          transactionDate >= start &&
+          transactionDate <= end
+        );
+      });
+
+      // Aktualizujemy każdy trafiony cel
+      for (const goal of affectedGoals) {
+        const newAmount = goal.currentAmount + transaction.amount;
+        await updateAmount(goal.id, newAmount);
+
+        // Tutaj można wyzwolić system Alertów (createAlert), jeśli newAmount >= targetAmount
+      }
+    },
+    [goals, updateAmount],
+  );
+
   return {
     goals,
     isReady,
@@ -120,5 +157,6 @@ export function useGoalsService() {
     deleteGoal: removeGoal,
     getGoalProgress,
     getGoalProgresses,
+    processTransactionForGoals, // Eksportujemy nową funkcję do użycia w aplikacji
   };
 }
