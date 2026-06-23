@@ -6,11 +6,7 @@ import {
   replaceGoals,
   updateGoalAmount,
 } from "@/repositories/goals-repository";
-import {
-  GoalProgress,
-  FinancialGoal,
-  Transaction,
-} from "@/shared/types/finance";
+import { GoalProgress, FinancialGoal } from "@/shared/types/finance";
 import { generateId } from "@/shared/utils";
 import { isValid, parseISO } from "date-fns";
 
@@ -121,34 +117,6 @@ export function useGoalsService() {
     return goals.map((goal) => getGoalProgress(goal));
   }
 
-  // NOWOŚĆ: Logika przetwarzająca transakcję dla celów
-  const processTransactionForGoals = useCallback(
-    async (transaction: Transaction) => {
-      const transactionDate = parseISO(transaction.date).getTime();
-
-      // Szukamy celów z tą samą kategorią, które pokrywają się datą z transakcją
-      const affectedGoals = goals.filter((goal) => {
-        const start = parseISO(goal.startDate).getTime();
-        const end = parseISO(goal.endDate).getTime();
-
-        return (
-          goal.categoryId === transaction.categoryId &&
-          transactionDate >= start &&
-          transactionDate <= end
-        );
-      });
-
-      // Aktualizujemy każdy trafiony cel
-      for (const goal of affectedGoals) {
-        const newAmount = goal.currentAmount + transaction.amount;
-        await updateAmount(goal.id, newAmount);
-
-        // Tutaj można wyzwolić system Alertów (createAlert), jeśli newAmount >= targetAmount
-      }
-    },
-    [goals, updateAmount],
-  );
-
   return {
     goals,
     isReady,
@@ -157,6 +125,5 @@ export function useGoalsService() {
     deleteGoal: removeGoal,
     getGoalProgress,
     getGoalProgresses,
-    processTransactionForGoals, // Eksportujemy nową funkcję do użycia w aplikacji
   };
 }

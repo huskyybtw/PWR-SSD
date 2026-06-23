@@ -1,45 +1,79 @@
-import { Transaction, FinancialGoal } from "@/shared/types/finance";
-import { listGoals, updateGoalAmount } from "../repositories/goals-repository";
-import { createAlert } from "../repositories/alerts-repository";
-import { parseISO } from "date-fns";
+// --- 1. BLOKUJEMY PLIK BAZY DANYCH ZANIM COKOLWIEK INNEGO SIĘ ZAŁADUJE ---
+jest.mock("@/shared/client", () => ({
+  db: {}, // Pusta atrapa
+}));
+// ------------------------------------------------------------------------
 
-export async function processTransactionForGoals(
-  transaction: Transaction,
-): Promise<void> {
-  // 1. Pobieramy wszystkie cele z bazy
-  const goals = await listGoals();
+import { processTransactionForGoals } from "./goal-transactions-service";
+import * as goalsRepo from "../repositories/goals-repository";
+import * as alertsRepo from "../repositories/alerts-repository";
+import { FinancialGoal, Transaction } from "@/shared/types/finance";
 
-  // Bezpieczne parsowanie daty transakcji
-  const transactionDate = parseISO(transaction.date).getTime();
+// Blokujemy uderzenia do repozytoriów
+jest.mock("../repositories/goals-repository");
+jest.mock("../repositories/alerts-repository");
 
-  // 2. Filtrujemy cele - szukamy tych z tą samą kategorią, w których ramach czasowych mieści się transakcja
-  const affectedGoals = goals.filter((goal) => {
-    const start = parseISO(goal.startDate).getTime();
-    const end = parseISO(goal.endDate).getTime();
+describe("Integration Test: Transaction -> Goal -> Alert", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-    return (
-      goal.categoryId === transaction.categoryId &&
-      transactionDate >= start &&
-      transactionDate <= end
+  it("powinno zaktualizować cel i wygenerować alert, jeśli transakcja pasuje do kategorii i mieści się w czasie", async () => {
+    const mockGoal: FinancialGoal = {
+      id: "goal-1",
+      userId: 1,
+      goalType: "saving",
+      categoryId: 99,
+      name: "Rower",
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: "2026-01-01T00:00:00.000Z",
+      endDate: "2026-12-31T23:59:59.000Z",
+    };
+
+    (goalsRepo.listGoals as jest.Mock).mockResolvedValue([mockGoal]);
+
+    const importedTransaction = {
+      id: 1,
+      amount: 500,
+      categoryId: 99,
+      date: "2026-06-15T12:00:00.000Z",
+      description: "Wpłata na rower",
+    } as Transaction;
+
+    await processTransactionForGoals(importedTransaction);
+
+    expect(goalsRepo.updateGoalAmount).toHaveBeenCalledWith("goal-1", 1000);
+    expect(alertsRepo.createAlert).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "goal_achieved" }),
     );
   });
 
-  // 3. System updates saving goal progress (Zadanie od PM-a)
-  for (const goal of affectedGoals) {
-    const newAmount = goal.currentAmount + transaction.amount;
-    await updateGoalAmount(goal.id, newAmount);
+  it("NIE powinno robić nic, jeśli transakcja należy do innej kategorii", async () => {
+    const mockGoal: FinancialGoal = {
+      id: "goal-1",
+      userId: 1,
+      goalType: "saving",
+      categoryId: 99,
+      name: "Rower",
+      targetAmount: 1000,
+      currentAmount: 500,
+      startDate: "2026-01-01T00:00:00.000Z",
+      endDate: "2026-12-31T23:59:59.000Z",
+    };
 
-    // 4. Alert is generated in case of reaching a goal (Zadanie od PM-a)
-    if (newAmount >= goal.targetAmount) {
-      await createAlert({
-        id: `alert-goal-${Date.now()}-${goal.id}`,
-        type: "goal_achieved",
-        title: "Cel Osiągnięty!",
-        message: `Gratulacje! Udało Ci się osiągnąć cel: ${goal.name}.`,
-        read: false,
-        createdAt: new Date().toISOString(),
-        relatedId: goal.id,
-      });
-    }
-  }
-}
+    (goalsRepo.listGoals as jest.Mock).mockResolvedValue([mockGoal]);
+
+    const regularTransaction = {
+      id: 2,
+      amount: 50,
+      categoryId: 42,
+      date: "2026-06-15T12:00:00.000Z",
+    } as Transaction;
+
+    await processTransactionForGoals(regularTransaction);
+
+    expect(goalsRepo.updateGoalAmount).not.toHaveBeenCalled();
+    expect(alertsRepo.createAlert).not.toHaveBeenCalled();
+  });
+});

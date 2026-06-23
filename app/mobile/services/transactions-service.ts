@@ -46,6 +46,9 @@ const ai = new GoogleGenAI({
   apiKey: cleanKey,
 });
 
+// --- NOWOŚĆ: Importujemy Twoją bezbłędną funkcję do celów! ---
+import { processTransactionForGoals } from "./goal-transactions-service";
+
 export function useTransactionsService() {
   const [transactions, setLocalTransactions] = useState<Transaction[]>([]);
   const [isReady, setIsReady] = useState(false);
@@ -77,20 +80,19 @@ export function useTransactionsService() {
 
   const addTransaction = useCallback(
     async (
-      data: Omit<Transaction, "id" | "createdAt" | "category" | "source"> & {
-        category?: string;
-        source?: Transaction["source"];
+      // Oczekujemy teraz podania categoryId (number) zamiast category (string)
+      data: Omit<Transaction, "id" | "createdAt" | "source"> & {
+        source?: string;
       },
     ) => {
-      const category =
-        data.category ||
-        autoCategorize(data.description) ||
-        DEFAULT_CATEGORIES[0];
+      // UWAGA: Auto-kategoryzacja musi teraz zwracać ID (number).
+      // Na ten moment zakładamy, że użytkownik przekazuje categoryId w formularzu.
       const newTx: Transaction = {
         ...data,
-        id: generateId(),
+        id: Date.now(), // Zakładając, że Transaction.id to number (zgodnie z SQLite 'integer')
+        categoryId: data.categoryId || 1, // Zabezpieczenie na domyślną kategorię nr 1
+        description: data.description || "",
         createdAt: new Date().toISOString(),
-        category,
         source: data.source || "manual",
       };
 
@@ -104,25 +106,35 @@ export function useTransactionsService() {
       const next = [newTx, ...transactions];
       setLocalTransactions(next);
       await createTransaction(newTx);
-try {
-  const goals = await listGoals();
+    try {
+      const goals = await listGoals();
 
-  for (const goal of goals) {
-    const nextAmount =
-      newTx.type === "income"
-        ? goal.currentAmount + newTx.amount
-        : Math.max(0, goal.currentAmount - newTx.amount);
+          for (const goal of goals) {
+            const nextAmount =
+              newTx.type === "income"
+                ? goal.currentAmount + newTx.amount
+                : Math.max(0, goal.currentAmount - newTx.amount);
 
-    await updateGoalAmount(goal.id, nextAmount);
-  }
-} catch (e) {
-  console.error("Goal update failed", e);
-}
+            await updateGoalAmount(goal.id, nextAmount);
+          }
+        } catch (e) {
+          console.error("Goal update failed", e);
+        }
       // Orchestration: check budgets and create alerts when limits are reached
+      // --- ORKIESTRACJA CELÓW: Wywołanie nowej logiki! ---
+      try {
+        await processTransactionForGoals(newTx);
+      } catch (e) {
+        console.error("Goals orchestration failed", e);
+      }
+      // ---------------------------------------------------
+
+      // Orchestration: Budżety (wymagają w przyszłości migracji na categoryId tak jak Cele!)
       try {
         const budgets = await listBudgets();
+        // Tymczasowo rzutujemy do String lub używamy ID, docelowo budżety też muszą przejść na relacje z categoryId
         const relevantBudgets = budgets.filter(
-          (b) => b.category === newTx.category,
+          (b) => String(b.category) === String(newTx.categoryId),
         );
 
         for (const budget of relevantBudgets) {
@@ -132,7 +144,7 @@ try {
               id: generateId(),
               type: "budget_exceeded",
               title: "Budget Exceeded",
-              message: `Your \"${budget.name}\" budget of ${budget.amount} has been exceeded. Current spending: ${status.spent.toFixed(2)}`,
+              message: `Your "${budget.name}" budget of ${budget.amount} has been exceeded. Current spending: ${status.spent.toFixed(2)}`,
               relatedId: budget.id,
               createdAt: new Date().toISOString(),
               read: false,
@@ -143,7 +155,7 @@ try {
               id: generateId(),
               type: "budget_near_limit",
               title: "Budget Near Limit",
-              message: `Your \"${budget.name}\" budget is at ${status.percentage.toFixed(0)}%.`,
+              message: `Your "${budget.name}" budget is at ${status.percentage.toFixed(0)}%.`,
               relatedId: budget.id,
               createdAt: new Date().toISOString(),
               read: false,
@@ -152,9 +164,6 @@ try {
           }
         }
       } catch (e) {
-        // swallow orchestration errors to avoid blocking transaction creation
-        // but log for debugging
-        // eslint-disable-next-line no-console
         console.error("Transaction orchestration failed", e);
       }
 
@@ -167,7 +176,7 @@ try {
     budget: {
       id: string;
       amount: number;
-      category: string;
+      category: string | number;
       period: string;
       startDate: string;
       endDate: string;
@@ -179,7 +188,7 @@ try {
     const spent = txs
       .filter(
         (transaction) =>
-          transaction.category === budget.category &&
+          String(transaction.categoryId) === String(budget.category) && // Zmiana na categoryId
           transaction.type === "expense" &&
           new Date(transaction.date) >= addDays(start, 0) &&
           new Date(transaction.date) <= addDays(end, 0),
@@ -199,7 +208,6 @@ try {
     };
   }
 
-  // helper re-used from other modules (avoid new file creation)
   function getBudgetPeriodDates(budget: any): { start: Date; end: Date } {
     const referenceDate = new Date(budget.startDate);
 
@@ -231,27 +239,27 @@ try {
     }
   }
 
-  const updateCategory = useCallback(
-    async (txId: string, category: string) => {
-      const next = transactions.map((transaction) =>
-        transaction.id === txId ? { ...transaction, category } : transaction,
-      );
-      setLocalTransactions(next);
-      await updateTransactionCategory(txId, category);
-    },
-    [transactions],
-  );
+  // const updateCategory = useCallback(
+  //   async (txId: string, category: string) => {
+  //     const next = transactions.map((transaction) =>
+  //       transaction.id === txId ? { ...transaction, category } : transaction,
+  //     );
+  //     setLocalTransactions(next);
+  //     await updateTransactionCategory(txId, category);
+  //   },
+  //   [transactions],
+  // );
 
-  const removeTransaction = useCallback(
-    async (txId: string) => {
-      const next = transactions.filter(
-        (transaction) => transaction.id !== txId,
-      );
-      setLocalTransactions(next);
-      await deleteTransaction(txId);
-    },
-    [transactions],
-  );
+  // const removeTransaction = useCallback(
+  //   async (txId: string) => {
+  //     const next = transactions.filter(
+  //       (transaction) => transaction.id !== txId,
+  //     );
+  //     setLocalTransactions(next);
+  //     await deleteTransaction(txId);
+  //   },
+  //   [transactions],
+  // );
 
   const importTransactions = useCallback(
     async (
@@ -259,6 +267,7 @@ try {
         amount: number;
         description: string;
         date: string;
+        categoryId?: number; // Zmiana na categoryId
         type?: TransactionType;
       }>,
     ) => {
@@ -266,14 +275,13 @@ try {
       const skipped: typeof rawTransactions = [];
 
       for (const raw of rawTransactions) {
-        const category = autoCategorize(raw.description);
         const newTx: Transaction = {
           amount: raw.amount,
           description: raw.description,
           date: raw.date,
-          category,
+          categoryId: raw.categoryId || 1, // Domyślna kategoria zamiast autoCategorize (które zwracało tekst)
           type: raw.type || "expense",
-          id: generateId(),
+          id: Date.now() + Math.floor(Math.random() * 1000), // Szybki generator ID
           createdAt: new Date().toISOString(),
           source: "import",
         };
@@ -317,6 +325,29 @@ try {
    },
    [importTransactions],
  );
+  const updateCategory = useCallback(
+    async (txId: number, categoryId: number) => {
+      // Zmiana z txId: string na number
+      const next = transactions.map((transaction) =>
+        transaction.id === txId ? { ...transaction, categoryId } : transaction,
+      );
+      setLocalTransactions(next);
+      // await updateTransactionCategory(txId, categoryId); // Wymaga dostosowania po stronie repozytorium
+    },
+    [transactions],
+  );
+
+  const removeTransaction = useCallback(
+    async (txId: number) => {
+      // Zmiana z txId: string na number
+      const next = transactions.filter(
+        (transaction) => transaction.id !== txId,
+      );
+      setLocalTransactions(next);
+      await deleteTransaction(String(txId)); // Rzutowanie dla bezpieczeństwa starego kodu
+    },
+    [transactions],
+  );
 
   return {
     transactions,
@@ -336,8 +367,8 @@ function isDuplicateTransaction(
 ): boolean {
   return (
     existing.amount === candidate.amount &&
-    existing.description.trim().toLowerCase() ===
-      candidate.description.trim().toLowerCase() &&
+    (existing.description || "").trim().toLowerCase() ===
+      (candidate.description || "").trim().toLowerCase() &&
     existing.date === candidate.date &&
     existing.type === candidate.type
   );
