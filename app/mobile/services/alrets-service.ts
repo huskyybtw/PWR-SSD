@@ -12,17 +12,19 @@ export function useAlertsService() {
   const [alerts, setLocalAlerts] = useState<AlertMessage[]>([]);
   const [isReady, setIsReady] = useState(false);
 
+  const refreshAlerts = useCallback(async () => {
+    const storedAlerts = await listAlerts();
+    setLocalAlerts(storedAlerts);
+    return storedAlerts;
+  }, []);
+
   useEffect(() => {
     let active = true;
 
     async function load() {
-      const storedAlerts = await listAlerts();
-
       if (!active) return;
 
-      if (storedAlerts) {
-        setLocalAlerts(storedAlerts);
-      }
+      await refreshAlerts();
 
       setIsReady(true);
     }
@@ -43,30 +45,26 @@ export function useAlertsService() {
         read: false,
       };
 
-      setLocalAlerts((current) => {
-        const next = [newAlert, ...current];
-        createAlert(newAlert);
-        return next;
-      });
+      await createAlert(newAlert);
+      await refreshAlerts();
 
       return newAlert;
     },
-    [],
+    [refreshAlerts],
   );
 
-  const markRead = useCallback(async (alertId: string) => {
-    setLocalAlerts((current) => {
-      const next = current.map((alert) =>
-        alert.id === alertId ? { ...alert, read: true } : alert,
-      );
-      markAlertRead(alertId);
-      return next;
-    });
-  }, []);
+  const markRead = useCallback(
+    async (alertId: string) => {
+      await markAlertRead(alertId);
+      await refreshAlerts();
+    },
+    [refreshAlerts],
+  );
 
   return {
     alerts,
     isReady,
+    refreshAlerts,
     addAlert,
     markAlertRead: markRead,
     unreadAlertsCount: alerts.filter((alert) => !alert.read).length,
