@@ -29,6 +29,8 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
   const importTransactions = transactionsState.importTransactions;
   const updateTransactionCategory = transactionsState.updateTransactionCategory;
   const deleteTransaction = transactionsState.deleteTransaction;
+  const importFromReceiptImage = transactionsState.importFromReceiptImage;
+  const importFromStatementDocument = transactionsState.importFromStatementDocument;
 
   const addBudget = budgetsState.addBudget;
   const deleteBudget = budgetsState.deleteBudget;
@@ -102,6 +104,8 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
     importTransactions,
     updateTransactionCategory,
     deleteTransaction,
+    importFromReceiptImage,
+    importFromStatementDocument,
     addCategory,
     addBudget,
     deleteBudget,

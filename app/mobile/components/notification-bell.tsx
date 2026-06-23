@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 import { useFinance } from "@/app/_finance-context";
-import { Colors } from "@/constants/Colors";
+import { Colors } from "@/constants/colors";
 import { formatDate } from "@/shared/utils";
 
 export function NotificationBell() {

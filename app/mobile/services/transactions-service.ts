@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-
+import { createAlert } from "@/repositories/alerts-repository";
+import { listBudgets } from "@/repositories/budgets-repository";
 import {
   autoCategorize,
   DEFAULT_CATEGORIES,
@@ -11,9 +11,13 @@ import {
   replaceTransactions,
   updateTransactionCategory,
 } from "@/repositories/transactions-repository";
-import { listBudgets } from "@/repositories/budgets-repository";
-import { createAlert } from "@/repositories/alerts-repository";
-import { AlertMessage } from "@/shared/types/finance";
+import {
+  AlertMessage,
+  Transaction,
+  TransactionType,
+} from "@/shared/types/finance";
+import { generateId } from "@/shared/utils";
+import { GoogleGenAI, Type } from "@google/genai"; // Import SDK
 import {
   addDays,
   endOfMonth,
@@ -24,8 +28,25 @@ import {
   startOfWeek,
   startOfYear,
 } from "date-fns";
-import { Transaction, TransactionType } from "@/shared/types/finance";
-import { generateId } from "@/shared/utils";
+import { useCallback, useEffect, useState } from "react";
+import { processReceiptWithAI } from "./transactions/ocr-reader";
+import { processStatementWithAI } from "./transactions/statement-analyzer";
+
+const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || "";
+const cleanKey = apiKey.trim();
+
+if (!apiKey) {
+  console.warn(
+    "Warning: EXPO_PUBLIC_GEMINI_API_KEY is not defined in your environment variables.",
+  );
+}
+
+console.log(apiKey);
+const ai = new GoogleGenAI({
+  apiKey: cleanKey,
+});
+
+console.log(ai);
 
 export function useTransactionsService() {
   const [transactions, setLocalTransactions] = useState<Transaction[]>([]);
@@ -199,6 +220,28 @@ export function useTransactionsService() {
     }
   }
 
+  const updateCategory = useCallback(
+    async (txId: string, category: string) => {
+      const next = transactions.map((transaction) =>
+        transaction.id === txId ? { ...transaction, category } : transaction,
+      );
+      setLocalTransactions(next);
+      await updateTransactionCategory(txId, category);
+    },
+    [transactions],
+  );
+
+  const removeTransaction = useCallback(
+    async (txId: string) => {
+      const next = transactions.filter(
+        (transaction) => transaction.id !== txId,
+      );
+      setLocalTransactions(next);
+      await deleteTransaction(txId);
+    },
+    [transactions],
+  );
+
   const importTransactions = useCallback(
     async (
       rawTransactions: Array<{
@@ -245,33 +288,32 @@ export function useTransactionsService() {
     [transactions],
   );
 
-  const updateCategory = useCallback(
-    async (txId: string, category: string) => {
-      const next = transactions.map((transaction) =>
-        transaction.id === txId ? { ...transaction, category } : transaction,
-      );
-      setLocalTransactions(next);
-      await updateTransactionCategory(txId, category);
-    },
-    [transactions],
-  );
+ const importFromReceiptImage = useCallback(
+   async (base64Data: string, mimeType: string) => {
+     return processReceiptWithAI(ai, base64Data, mimeType, importTransactions);
+   },
+   [importTransactions],
+ );
 
-  const removeTransaction = useCallback(
-    async (txId: string) => {
-      const next = transactions.filter(
-        (transaction) => transaction.id !== txId,
-      );
-      setLocalTransactions(next);
-      await deleteTransaction(txId);
-    },
-    [transactions],
-  );
+ const importFromStatementDocument = useCallback(
+   async (base64Data: string, mimeType: string) => {
+     return processStatementWithAI(
+       ai,
+       base64Data,
+       mimeType,
+       importTransactions,
+     );
+   },
+   [importTransactions],
+ );
 
   return {
     transactions,
     isReady,
     addTransaction,
     importTransactions,
+    importFromReceiptImage,
+    importFromStatementDocument,
     updateTransactionCategory: updateCategory,
     deleteTransaction: removeTransaction,
   };
