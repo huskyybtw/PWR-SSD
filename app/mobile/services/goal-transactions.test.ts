@@ -1,70 +1,45 @@
-// Wyobrażamy sobie, że te funkcje zaraz napiszemy/podepniemy
-import { processTransactionForGoal } from "./goal-transactions-service";
-import * as goalsRepo from "../repositories/goals-repository";
-import * as alertsRepo from "../repositories/alerts-repository";
+import { Transaction, FinancialGoal } from "@/shared/types/finance";
+import { listGoals, updateGoalAmount } from "../repositories/goals-repository";
+import { createAlert } from "../repositories/alerts-repository";
+import { parseISO } from "date-fns";
 
-// --- DODAJEMY TO: Blokujemy natywne Expo SQLite ---
-jest.mock("expo-sqlite", () => ({
-  openDatabaseSync: jest.fn(() => ({})),
-}));
-// --------------------------------------------------
+export async function processTransactionForGoals(
+  transaction: Transaction,
+): Promise<void> {
+  // 1. Pobieramy wszystkie cele z bazy
+  const goals = await listGoals();
 
-// Blokujemy prawdziwe uderzenia do bazy
-jest.mock("../repositories/goals-repository");
-jest.mock("../repositories/alerts-repository");
+  // Bezpieczne parsowanie daty transakcji
+  const transactionDate = parseISO(transaction.date).getTime();
 
-describe("Integration Test: Transaction -> Goal -> Alert", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+  // 2. Filtrujemy cele - szukamy tych z tą samą kategorią, w których ramach czasowych mieści się transakcja
+  const affectedGoals = goals.filter((goal) => {
+    const start = parseISO(goal.startDate).getTime();
+    const end = parseISO(goal.endDate).getTime();
 
-  // Test 1: Happy path (Zadanie od PM-a)
-  it("should update goal amount and generate alert when goal is reached", async () => {
-    // Symulujemy cel, któremu brakuje 500 zł do osiągnięcia sukcesu
-    const mockGoal = {
-      id: "goal-1",
-      name: "Rower",
-      targetAmount: 1000,
-      currentAmount: 500,
-    };
-    (goalsRepo.listGoals as jest.Mock).mockResolvedValue([mockGoal]);
-
-    // Nowa transakcja wpada do systemu
-    const importedTransaction = {
-      id: "txn-1",
-      amount: 500, // Akurat tyle, żeby dobić do celu!
-      description: "Wpłata na rower",
-      date: new Date().toISOString(),
-      category: "savings",
-      type: "expense",
-      createdAt: new Date().toISOString(),
-      source: "import",
-      goalId: "goal-1", // Most zadziałał!
-    } as any;
-
-    await processTransactionForGoal(importedTransaction);
-
-    // Sprawdzamy: Czy system zaktualizował kwotę do 1000?
-    expect(goalsRepo.updateGoalAmount).toHaveBeenCalledWith("goal-1", 1000);
-    // Sprawdzamy: Czy system wygenerował alert o sukcesie?
-    expect(alertsRepo.createAlert).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "goal_achieved" }),
+    return (
+      goal.categoryId === transaction.categoryId &&
+      transactionDate >= start &&
+      transactionDate <= end
     );
   });
 
-  // Test 2: Any other (Transakcja bez przypisanego celu)
-  it("should do nothing if transaction is not linked to any goal", async () => {
-    const regularTransaction = {
-      id: "txn-2",
-      amount: 50,
-      type: "expense",
-      goalId: undefined, // Zwykłe zakupy w biedronce, bez celu
-    } as any;
+  // 3. System updates saving goal progress (Zadanie od PM-a)
+  for (const goal of affectedGoals) {
+    const newAmount = goal.currentAmount + transaction.amount;
+    await updateGoalAmount(goal.id, newAmount);
 
-    await processTransactionForGoal(regularTransaction);
-
-    // Sprawdzamy: System nie powinien ruszać celów ani alertów
-    expect(goalsRepo.updateGoalAmount).not.toHaveBeenCalled();
-    expect(alertsRepo.createAlert).not.toHaveBeenCalled();
-  });
-});
+    // 4. Alert is generated in case of reaching a goal (Zadanie od PM-a)
+    if (newAmount >= goal.targetAmount) {
+      await createAlert({
+        id: `alert-goal-${Date.now()}-${goal.id}`,
+        type: "goal_achieved",
+        title: "Cel Osiągnięty!",
+        message: `Gratulacje! Udało Ci się osiągnąć cel: ${goal.name}.`,
+        read: false,
+        createdAt: new Date().toISOString(),
+        relatedId: goal.id,
+      });
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { createGoal } from "../repositories/goals-repository";
 
-// 1. Definiujemy nasz udawany magazyn bazy danych (zmienna musi zaczynać się od "mock")
+// 1. Definiujemy nasz udawany magazyn bazy danych
 const mockDbStore: any[] = [];
 
 // 2. MOCKOWANIE: Oszukujemy aplikację. Zamiast łączyć się z prawdziwym SQLite na telefonie,
@@ -20,8 +20,7 @@ jest.mock("@/shared/client", () => ({
 }));
 
 describe("Integration Test: Database Layer (Service -> DB)", () => {
-  // 3. Czyszczenie naszej udawanej bazy przed KAŻDYM testem,
-  // żeby testy nie wchodziły sobie w drogę.
+  // 3. Czyszczenie naszej udawanej bazy przed KAŻDYM testem
   beforeEach(() => {
     mockDbStore.length = 0;
   });
@@ -30,10 +29,14 @@ describe("Integration Test: Database Layer (Service -> DB)", () => {
   it("should successfully create a new saving goal in database (Happy Path)", async () => {
     const newGoal = {
       id: "test-goal-001",
+      userId: 1, // Dodano: identyfikator użytkownika
+      categoryId: 5, // Dodano: kategoria
+      goalType: "saving" as const, // Dodano: typ celu
       name: "Wymarzone wakacje",
       targetAmount: 5000,
       currentAmount: 0,
-      deadline: "2027-06-01T12:00:00.000Z",
+      startDate: "2026-06-01T12:00:00.000Z", // Nowe pole startowe
+      endDate: "2027-06-01T12:00:00.000Z", // Zastępuje deadline
       createdAt: new Date().toISOString(),
     };
 
@@ -46,19 +49,24 @@ describe("Integration Test: Database Layer (Service -> DB)", () => {
     const invalidGoal = {
       id: "test-goal-002",
       currentAmount: 0,
+      // Brakuje name, targetAmount, userId, categoryId, startDate, endDate!
     } as any;
 
-    await expect(createGoal(invalidGoal)).rejects.toThrow();
+    await expect(createGoal(invalidGoal)).rejects.toThrow("Invalid user input");
   });
 
   // KROK 3: Duplicates
   it("should throw an error when trying to create a goal with an existing ID", async () => {
     const duplicateGoal = {
       id: "test-goal-duplicate",
+      userId: 1,
+      categoryId: 5,
+      goalType: "saving" as const,
       name: "Nowy komputer",
       targetAmount: 8000,
       currentAmount: 0,
-      deadline: "2027-12-31T12:00:00.000Z",
+      startDate: "2026-06-01T12:00:00.000Z",
+      endDate: "2027-12-31T12:00:00.000Z",
       createdAt: new Date().toISOString(),
     };
 
@@ -66,6 +74,8 @@ describe("Integration Test: Database Layer (Service -> DB)", () => {
     await createGoal(duplicateGoal);
 
     // Drugi zapis - nasz mock sprytnie zwróci obiekt, więc tarcza wyrzuci błąd!
-    await expect(createGoal(duplicateGoal)).rejects.toThrow();
+    await expect(createGoal(duplicateGoal)).rejects.toThrow(
+      "Goal with this ID already exists",
+    );
   });
 });
