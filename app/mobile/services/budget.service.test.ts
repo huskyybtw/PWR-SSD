@@ -4,6 +4,13 @@ import {
   listBudgets,
 } from "../repositories/budgets-repository";
 
+jest.mock("expo-sqlite", () => ({ openDatabaseSync: jest.fn(() => ({})) }));
+jest.mock("drizzle-orm", () => ({ eq: jest.fn() }));
+jest.mock("@/shared/schema", () => ({
+  goals: { id: "mock-goal-id" },
+  budgets: { id: "mock-budget-id" },
+}));
+
 const mockDbStore: any[] = [];
 
 jest.mock("@/shared/client", () => ({
