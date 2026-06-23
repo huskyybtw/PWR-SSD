@@ -3,7 +3,7 @@ import { migrate } from "drizzle-orm/expo-sqlite/migrator";
 import { openDatabaseSync } from "expo-sqlite";
 import migrations from "@/drizzle/migrations";
 
-const sqlite = openDatabaseSync("app.db");
+const sqlite = openDatabaseSync("finance.db");
 
 export const db = drizzle(sqlite);
 

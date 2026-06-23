@@ -12,7 +12,10 @@ import {
   updateTransactionCategory,
 } from "@/repositories/transactions-repository";
 import { listBudgets } from "@/repositories/budgets-repository";
-import { createAlert } from "@/repositories/alerts-repository";
+import {
+  createAlert,
+  hasUnreadAlertForRelatedId,
+} from "@/repositories/alerts-repository";
 import { AlertMessage } from "@/shared/types/finance";
 import {
   addDays,
@@ -27,9 +30,16 @@ import {
 import { Transaction, TransactionType } from "@/shared/types/finance";
 import { generateId } from "@/shared/utils";
 
-export function useTransactionsService() {
+type UseTransactionsServiceOptions = {
+  refreshAlerts?: () => Promise<AlertMessage[]>;
+};
+
+export function useTransactionsService(
+  options: UseTransactionsServiceOptions = {},
+) {
   const [transactions, setLocalTransactions] = useState<Transaction[]>([]);
   const [isReady, setIsReady] = useState(false);
+  const { refreshAlerts } = options;
 
   useEffect(() => {
     let active = true;
@@ -93,9 +103,33 @@ export function useTransactionsService() {
           (b) => b.category === newTx.category,
         );
 
+        const refreshAlertsAfterWrite = async () => {
+          if (!refreshAlerts) {
+            return;
+          }
+
+          await new Promise<void>((resolve) => {
+            setTimeout(() => {
+              void refreshAlerts()
+                .catch((error) => {
+                  console.error("Failed to refresh alerts", error);
+                })
+                .finally(() => resolve());
+            }, 50);
+          });
+        };
+
         for (const budget of relevantBudgets) {
           const status = getBudgetStatus(budget, next);
           if (status.isExceeded && newTx.type === "expense") {
+            const alertAlreadyExists = await hasUnreadAlertForRelatedId(
+              budget.id,
+            );
+
+            if (alertAlreadyExists) {
+              continue;
+            }
+
             const alert: AlertMessage = {
               id: generateId(),
               type: "budget_exceeded",
@@ -106,7 +140,16 @@ export function useTransactionsService() {
               read: false,
             };
             await createAlert(alert);
+            await refreshAlertsAfterWrite();
           } else if (status.isNearLimit && newTx.type === "expense") {
+            const alertAlreadyExists = await hasUnreadAlertForRelatedId(
+              budget.id,
+            );
+
+            if (alertAlreadyExists) {
+              continue;
+            }
+
             const alert: AlertMessage = {
               id: generateId(),
               type: "budget_near_limit",
@@ -117,6 +160,7 @@ export function useTransactionsService() {
               read: false,
             };
             await createAlert(alert);
+            await refreshAlertsAfterWrite();
           }
         }
       } catch (e) {

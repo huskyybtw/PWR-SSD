@@ -18,10 +18,12 @@ import {
 } from "@/shared/types/finance";
 
 export const [FinanceProvider, useFinance] = createContextHook(() => {
-  const transactionsState = useTransactionsService();
+  const alertsState = useAlertsService();
+  const transactionsState = useTransactionsService({
+    refreshAlerts: alertsState.refreshAlerts,
+  });
   const budgetsState = useBudgetsService();
   const goalsState = useGoalsService();
-  const alertsState = useAlertsService();
   const categoriesState = useCategoriesService();
 
   const addTransaction = transactionsState.addTransaction;
@@ -114,6 +116,7 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
     getGoalProgresses,
     getReportData: getReportDataForRange,
     addAlert: alertsState.addAlert,
+    refreshAlerts: alertsState.refreshAlerts,
     markAlertRead: alertsState.markAlertRead,
   };
 });
