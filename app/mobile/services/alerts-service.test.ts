@@ -16,11 +16,10 @@ jest.mock("@/shared/client", () => ({
     delete: jest.fn().mockReturnThis(),
     values: jest.fn((val) => {
       mockDbStore.push(val);
-      // Chaining structure to support .returning().get() and fallback .run()
       return {
         run: jest.fn(),
         returning: jest.fn().mockReturnThis(),
-        get: jest.fn(() => val), // Returns the simulated database payload record directly
+        get: jest.fn(() => val), 
       };
     }),
     run: jest.fn(),
@@ -32,7 +31,6 @@ describe("Integration Test: Alerts Layer", () => {
     mockDbStore.length = 0;
   });
 
-  // 1. Happy Path - Prawidłowe dane
   it("should successfully create a new alert (Happy Path)", async () => {
     const newAlert = {
       type: "goal_achieved" as const,
@@ -42,7 +40,6 @@ describe("Integration Test: Alerts Layer", () => {
 
     await expect(createAlert(newAlert)).resolves.not.toThrow();
 
-    // Additional sanity check: ensure it returns our database object properties
     const result = await createAlert(newAlert);
     expect(result.title).toBe("Wielki Sukces!");
     expect(result.id).toBeDefined();
@@ -50,7 +47,6 @@ describe("Integration Test: Alerts Layer", () => {
     expect(result.read).toBe(false);
   });
 
-  // 2. Invalid Input - Błędne/Niekompletne dane
   it("should throw an error when providing invalid alert input", async () => {
     const invalidAlert = {
       read: false,

@@ -81,7 +81,7 @@ export default function GoalsScreen() {
               Track your progress toward targets
             </Text>
           </View>
-          <NotificationBell />
+          {/* <NotificationBell /> */}
         </View>
       </View>
 

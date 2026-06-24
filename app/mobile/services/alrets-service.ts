@@ -46,13 +46,10 @@ export function useAlertsService() {
 
   const addAlert = useCallback(
     async (alert: Omit<AlertMessage, "id" | "createdAt" | "read">) => {
-      // 1. Fire the repository insert statement first and await the actual SQLite row returns
       const persistedAlert = await createAlert(alert);
 
-      // 2. Commit the validated entity down to local React UI state counters
       setLocalAlerts((current) => [persistedAlert, ...current]);
 
-      // 3. Return the exact database-synced alert back to callers
       return persistedAlert;
     },
     [],

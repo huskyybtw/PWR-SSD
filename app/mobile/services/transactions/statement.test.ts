@@ -68,10 +68,8 @@ describe("Service Layer: processStatementWithAI against PKO Statement", () => {
       mockImportTransactionsFn,
     );
 
-    // Verify AI contract parameters were run correctly
     expect(mockAI.models.generateContent).toHaveBeenCalledTimes(1);
 
-    // Verify correct parsing array mapping passed downstream
     expect(mockImportTransactionsFn).toHaveBeenCalledWith([
       {
         amount: 30.0,
@@ -93,7 +91,6 @@ describe("Service Layer: processStatementWithAI against PKO Statement", () => {
       },
     ]);
 
-    // Verify pipeline summary payload delivery report metrics match
     expect(result.imported.length).toBe(3);
     expect(result.skipped.length).toBe(0);
   });

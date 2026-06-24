@@ -17,14 +17,85 @@ import {
 } from "@/shared/types/finance";
 
 export const [FinanceProvider, useFinance] = createContextHook(() => {
-  const transactionsState = useTransactionsService();
   const budgetsState = useBudgetsService();
   const goalsState = useGoalsService();
   const alertsState = useAlertsService();
   const categoriesState = useCategoriesService();
 
-  const addTransaction = transactionsState.addTransaction;
+  const handleGoalsUpdate = useCallback(
+    async (income: number, expense: number) => {
+      for (const goal of goalsState.goals) {
+        const wasAchieved = goal.currentAmount >= goal.targetAmount;
 
+        const nextAmount =
+          income > 0
+            ? goal.currentAmount + income
+            : Math.max(0, goal.currentAmount - expense);
+
+        const updatedGoal = await goalsState.updateGoalAmount(
+          goal.id,
+          nextAmount,
+        );
+
+        if (updatedGoal && !wasAchieved && nextAmount >= goal.targetAmount) {
+          try {
+            await alertsState.addAlert({
+              type: "goal_achieved",
+              title: "Goal Achieved! 🎉",
+              message: `Congratulations! You've reached your "${goal.name}" savings goal of ${goal.targetAmount.toFixed(2)}!`,
+              relatedId: goal.id,
+            });
+            await alertsState.refreshAlerts();
+          } catch (e) {
+            console.error("Goal achieved alert failed", e);
+          }
+        }
+      }
+
+      await alertsState.refreshAlerts();
+    },
+    [goalsState.goals, goalsState.updateGoalAmount, alertsState],
+  );
+
+  const handleBudgetAlert = useCallback(
+    async (
+      type: "budget_exceeded" | "budget_near_limit",
+      budgetName: string,
+      budgetId: string,
+      amount: number,
+      spent: number,
+      percentage: number,
+    ) => {
+      try {
+        if (type === "budget_exceeded") {
+          await alertsState.addAlert({
+            type: "budget_exceeded",
+            title: "Budget Exceeded",
+            message: `Your "${budgetName}" budget of ${amount} has been exceeded. Current spending: ${spent.toFixed(2)}`,
+            relatedId: budgetId,
+          });
+        } else {
+          await alertsState.addAlert({
+            type: "budget_near_limit",
+            title: "Budget Near Limit",
+            message: `Your "${budgetName}" budget is at ${percentage.toFixed(0)}%.`,
+            relatedId: budgetId,
+          });
+        }
+        await alertsState.refreshAlerts();
+      } catch (e) {
+        console.error("Budget alert failed", e);
+      }
+    },
+    [alertsState],
+  );
+
+  const transactionsState = useTransactionsService(
+    handleGoalsUpdate,
+    handleBudgetAlert,
+  );
+
+  const addTransaction = transactionsState.addTransaction;
   const importTransactions = transactionsState.importTransactions;
   const updateTransactionCategory = transactionsState.updateTransactionCategory;
   const deleteTransaction = transactionsState.deleteTransaction;
@@ -43,15 +114,23 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
 
   const updateGoalAmount = useCallback(
     async (goalId: string, amount: number) => {
+      const goal = goalsState.goals.find((g) => g.id === goalId);
+      const wasAchieved = goal ? goal.currentAmount >= goal.targetAmount : true;
+
       const updatedGoal = await goalsState.updateGoalAmount(goalId, amount);
 
-      if (updatedGoal && amount >= updatedGoal.targetAmount) {
-        await alertsState.addAlert({
-          type: "goal_achieved",
-          title: "Goal Achieved!",
-          message: `Congratulations! You've reached your "${updatedGoal.name}" savings goal of ${updatedGoal.targetAmount.toFixed(2)}!`,
-          relatedId: updatedGoal.id,
-        });
+      if (updatedGoal && !wasAchieved && amount >= updatedGoal.targetAmount) {
+        try {
+          await alertsState.addAlert({
+            type: "goal_achieved",
+            title: "Goal Achieved! 🎉",
+            message: `Congratulations! You've reached your "${updatedGoal.name}" savings goal of ${updatedGoal.targetAmount.toFixed(2)}!`,
+            relatedId: updatedGoal.id,
+          });
+          await alertsState.refreshAlerts();
+        } catch (e) {
+          console.error("Goal achieved alert failed", e);
+        }
       }
 
       return updatedGoal;

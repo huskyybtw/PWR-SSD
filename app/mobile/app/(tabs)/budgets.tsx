@@ -81,7 +81,7 @@ export default function BudgetsScreen() {
               Track spending against your limits
             </Text>
           </View>
-          <NotificationBell />
+          {/* <NotificationBell /> */}
         </View>
       </View>
 

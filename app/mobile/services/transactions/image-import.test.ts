@@ -5,7 +5,6 @@ describe("Service Layer: processReceiptWithAI", () => {
   let mockImportTransactionsFn: jest.Mock;
 
   beforeEach(() => {
-    // Mock only what this specific function uses
     mockAI = {
       models: {
         generateContent: jest.fn().mockResolvedValue({
@@ -18,7 +17,6 @@ describe("Service Layer: processReceiptWithAI", () => {
       },
     };
 
-    // Mock the downward repository pipeline handler directly
     mockImportTransactionsFn = jest.fn().mockResolvedValue({
       imported: [
         {
@@ -40,10 +38,8 @@ describe("Service Layer: processReceiptWithAI", () => {
       mockImportTransactionsFn,
     );
 
-    // Verify Service -> AI contract mapping
     expect(mockAI.models.generateContent).toHaveBeenCalledTimes(1);
 
-    // Verify Service -> Downward pipeline contract mapping
     expect(mockImportTransactionsFn).toHaveBeenCalledWith([
       {
         amount: 37.02,
@@ -53,13 +49,11 @@ describe("Service Layer: processReceiptWithAI", () => {
       },
     ]);
 
-    // Verify output match
     expect(result.amount).toBe(37.02);
     expect(result.description).toBe("Biedronka");
   });
 
   it("should reject and throw if downward pipeline flags a duplicate status", async () => {
-    // Simulate data layer rejecting it as a duplicate skip
     mockImportTransactionsFn.mockResolvedValue({
       imported: [],
       skipped: [{ amount: 37.02, description: "Biedronka" }],

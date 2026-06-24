@@ -48,17 +48,16 @@ export type NewAlertMessage = typeof alerts.$inferInsert;
 
 // --- TABELA: CELE OSZCZĘDNOŚCIOWE (GOALS) ---
 export const goals = sqliteTable("goals", {
-  // Kept your existing configuration (String IDs)
+
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   targetAmount: real("target_amount").notNull(),
   currentAmount: real("current_amount").notNull().default(0),
-  deadline: text("deadline").notNull(), // maps to end_date in the ER diagram
+  deadline: text("deadline").notNull(), 
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 
-  // New Columns added to support relationships from the image:
   userId: integer("user_id")
     .notNull()
     .references(() => users.id),
