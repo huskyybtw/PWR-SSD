@@ -1,10 +1,8 @@
-import { eq } from "drizzle-orm";
 import { db } from "@/shared/client";
 import { alerts } from "@/shared/schema";
 import { AlertMessage } from "@/shared/types/finance";
 import { generateId } from "@/shared/utils";
-
-const DEFAULT_USER_ID = 1;
+import { eq } from "drizzle-orm";
 
 export async function createAlert(
   value: Pick<AlertMessage, "type" | "title" | "message"> & {
@@ -15,50 +13,50 @@ export async function createAlert(
     throw new Error("Invalid alert input");
   }
 
-  const newAlert: AlertMessage = {
-    id: generateId(),
-    type: value.type,
-    title: value.title,
-    message: value.message,
-    createdAt: new Date().toISOString(),
-    read: false,
-    relatedId: value.relatedId,
-  };
+  const id = generateId();
+  const now = new Date().toISOString();
 
   await db
     .insert(alerts)
     .values({
-      userId: DEFAULT_USER_ID,
-      type: newAlert.type,
-      title: newAlert.title,
-      message: newAlert.message,
+      id,
+      type: value.type,
+      title: value.title,
+      message: value.message,
       read: false,
-      relatedId: newAlert.relatedId,
-      createdAt: newAlert.createdAt,
-    })
+      createdAt: now,
+    } as any)
     .run();
 
-  return newAlert;
+  return {
+    id,
+    type: value.type as AlertMessage["type"],
+    title: value.title,
+    message: value.message,
+    createdAt: now,
+    read: false,
+    relatedId: value.relatedId,
+  };
 }
 
 export async function listAlerts(): Promise<AlertMessage[]> {
-  const rows = await db.select().from(alerts).all();
+  const rows = (await db.select().from(alerts).all()) as any[];
 
   return rows.map((row) => ({
     id: String(row.id),
     type: row.type as AlertMessage["type"],
     title: row.title,
     message: row.message,
-    createdAt: row.createdAt,
-    read: row.read,
-    relatedId: row.relatedId ?? undefined,
+    createdAt: row.createdAt ?? row.created_at,
+    read: Boolean(row.read),
+    relatedId: row.related_id ?? row.relatedId ?? undefined,
   }));
 }
 
 export async function markAlertRead(alertId: string): Promise<void> {
   await db
     .update(alerts)
-    .set({ read: true })
-    .where(eq(alerts.id, Number(alertId)))
+    .set({ read: true } as any)
+    .where(eq(alerts.id, alertId))
     .run();
 }

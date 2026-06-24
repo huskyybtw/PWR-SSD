@@ -1,13 +1,12 @@
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system/legacy"; // Used to convert selected document into Base64 format
 import {
   ArrowDownLeft,
   ArrowUpRight,
   Camera,
   ChevronDown,
   FileText,
-  Filter,
   Plus,
   Search,
   X,
@@ -50,7 +49,6 @@ export default function TransactionsScreen() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
 
-  // Separate loading trackers for individual AI processes
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isProcessingDoc, setIsProcessingDoc] = useState(false);
 
@@ -149,7 +147,6 @@ export default function TransactionsScreen() {
     }
   }
 
-  // --- NEW NATIVE PDF EXTRACTOR FUNCTION ---
   async function handleImportFromDocument() {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -162,14 +159,12 @@ export default function TransactionsScreen() {
       const selectedFile = result.assets[0];
       setIsProcessingDoc(true);
 
-      // Read document target file stream data and convert into binary Base64 strings
       const fileBase64 = await FileSystem.readAsStringAsync(selectedFile.uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
       const mimeType = selectedFile.mimeType || "application/pdf";
 
-      // Dispatch directly via proxy logic wrapper to Gemini strategy layer
       const report = await importFromStatementDocument(fileBase64, mimeType);
 
       Alert.alert(
@@ -202,7 +197,7 @@ export default function TransactionsScreen() {
           <Text className="text-[28px] font-[800] text-appText">
             Transactions
           </Text>
-          <NotificationBell />
+          {/* <NotificationBell /> */}
         </View>
         <View className="flex-row gap-3">
           <View className="flex-1 bg-appSurface rounded-2xl p-[14px]">
@@ -234,15 +229,6 @@ export default function TransactionsScreen() {
             onChangeText={setSearch}
           />
         </View>
-        <TouchableOpacity
-          className={`w-[42px] h-[42px] rounded-xl items-center justify-center ${filterCategory ? "bg-appPrimary-muted" : "bg-appSurface"}`}
-          onPress={() => setFilterCategory(null)}
-        >
-          <Filter
-            size={18}
-            color={filterCategory ? Colors.primary : Colors.textMuted}
-          />
-        </TouchableOpacity>
       </View>
 
       {filterCategory && (

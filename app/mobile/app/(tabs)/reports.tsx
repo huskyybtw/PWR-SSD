@@ -166,7 +166,7 @@ export default function ReportsScreen() {
             </Text>
             <ChevronDown size={14} color={Colors.primary} />
           </TouchableOpacity>
-          <NotificationBell />
+          {/* <NotificationBell /> */}
         </View>
       </View>
 

@@ -174,7 +174,7 @@ export default function DashboardScreen() {
               Your financial overview
             </Text>
           </View>
-          <NotificationBell />
+          {/* <NotificationBell /> */}
         </View>
 
         <View className="rounded-[20px] overflow-hidden">

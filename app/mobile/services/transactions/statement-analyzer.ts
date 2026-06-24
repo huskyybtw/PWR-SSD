@@ -63,7 +63,6 @@ export async function processStatementWithAI(
   const extractedList: ExtractedStatementTransaction[] =
     parsedJSON.transactions || [];
 
-  // Normalize data data fallback safety mappings
   const normalizedTransactions = extractedList.map((tx) => ({
     amount: tx.amount || 0,
     description: tx.description || "Bank Transaction",
@@ -71,6 +70,5 @@ export async function processStatementWithAI(
     type: tx.type || "expense",
   }));
 
-  // Send the array down to the transaction-service pipeline repository mapping
   return await importTransactionsFn(normalizedTransactions);
 }

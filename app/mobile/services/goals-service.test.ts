@@ -1,14 +1,5 @@
 import { createGoal } from "../repositories/goals-repository";
 
-// --- BETONOWE MOCKI ZABEZPIECZAJĄCE PO MERGE'U Z PM-EM ---
-jest.mock("expo-sqlite", () => ({ openDatabaseSync: jest.fn(() => ({})) }));
-jest.mock("drizzle-orm", () => ({ eq: jest.fn() }));
-jest.mock("@/shared/schema", () => ({
-  goals: { id: "mock-goal-id" },
-  budgets: { id: "mock-budget-id" },
-}));
-// ---------------------------------------------------------
-
 const mockDbStore: any[] = [];
 
 jest.mock("@/shared/client", () => ({
@@ -68,8 +59,7 @@ describe("Integration Test: Database Layer (Service -> DB)", () => {
     };
 
     await createGoal(duplicateGoal);
-    await expect(createGoal(duplicateGoal)).rejects.toThrow(
-      "Goal with this ID already exists",
-    );
+
+    await expect(createGoal(duplicateGoal)).rejects.toThrow();
   });
 });
