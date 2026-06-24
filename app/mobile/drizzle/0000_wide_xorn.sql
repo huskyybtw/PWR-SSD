@@ -1,3 +1,41 @@
+--> statement-breakpoint
+CREATE TABLE `users` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`name` text NOT NULL,
+	`pin_hash` text,
+	`base_currency` text NOT NULL,
+	`created_date` text DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+--> statement-breakpoint
+CREATE TABLE `financial_goals` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`user_id` integer NOT NULL,
+	`goal_type` text NOT NULL,
+	`category_id` integer,
+	`name` text,
+	`target_amount` real NOT NULL,
+	`current_amount` real DEFAULT 0 NOT NULL,
+	`start_date` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`end_date` text NOT NULL,
+	`alert_message` text,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON UPDATE no action ON DELETE no action
+);
+
+CREATE TABLE `alerts` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`user_id` integer DEFAULT 1 NOT NULL,
+	`goal_id` integer,
+	`type` text DEFAULT 'goal_achieved' NOT NULL,
+	`title` text DEFAULT '' NOT NULL,
+	`message` text DEFAULT '' NOT NULL,
+	`read` integer DEFAULT false NOT NULL,
+	`related_id` text,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	FOREIGN KEY (`goal_id`) REFERENCES `financial_goals`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
 CREATE TABLE `categories` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
@@ -42,17 +80,3 @@ CREATE TABLE `transactions` (
 	FOREIGN KEY (`log_id`) REFERENCES `transaction_logs`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON UPDATE no action ON DELETE no action
 );
---> statement-breakpoint
-CREATE TABLE `users` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`name` text NOT NULL,
-	`pin_hash` text,
-	`base_currency` text NOT NULL,
-	`created_date` text DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
---> statement-breakpoint
-ALTER TABLE `goals` ADD `user_id` integer NOT NULL REFERENCES users(id);--> statement-breakpoint
-ALTER TABLE `goals` ADD `goal_type` text DEFAULT 'savings' NOT NULL;--> statement-breakpoint
-ALTER TABLE `goals` ADD `category_id` integer REFERENCES categories(id);--> statement-breakpoint
-ALTER TABLE `goals` ADD `start_date` text DEFAULT CURRENT_TIMESTAMP NOT NULL;--> statement-breakpoint
-ALTER TABLE `goals` ADD `alert_message` text;

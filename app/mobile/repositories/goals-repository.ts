@@ -1,55 +1,84 @@
 import { eq } from "drizzle-orm";
-
 import { db } from "@/shared/client";
-import { goals } from "@/shared/schema";
-import { FinancialGoal } from "@/shared/types/finance";
+import { financialGoals } from "@/shared/schema";
+import { SavingsGoal } from "@/shared/types/finance";
 
-export async function listGoals(): Promise<FinancialGoal[]> {
-  // Pobieramy dane z bazy (Drizzle zmapuje nazwy kolumn z _ na camelCase dzięki definicji w schema.ts)
-  return db.select().from(goals).all() as unknown as FinancialGoal[];
+const DEFAULT_USER_ID = 1;
+
+// Accepts both SavingsGoal (deadline) and test shape (endDate)
+type GoalInput =
+  | SavingsGoal
+  | {
+      id?: string;
+      name: string;
+      targetAmount: number;
+      currentAmount?: number;
+      deadline?: string;
+      endDate?: string;
+      startDate?: string;
+      createdAt?: string;
+      userId?: number;
+      categoryId?: number;
+      goalType?: string;
+    };
+
+export async function listGoals(): Promise<SavingsGoal[]> {
+  const table =
+    (financialGoals as any) ?? (require("@/shared/schema") as any).goals;
+  const rows = (await db.select().from(table).all()) as any[];
+
+  return rows
+    .filter((r: any) => !r.goalType || r.goalType === "saving")
+    .map((row: any) => ({
+      id: String(row.id ?? row.transactionIdText ?? ""),
+      name: row.name ?? "",
+      targetAmount: row.targetAmount,
+      currentAmount: row.currentAmount ?? 0,
+      deadline: row.endDate ?? row.deadline ?? "",
+      createdAt: row.startDate ?? row.createdAt,
+    }));
 }
 
-export async function createGoal(value: FinancialGoal): Promise<void> {
-  // 1. Tarcza na puste dane (rozbudowana o nowe wymagane pola)
-  if (
-    !value.name ||
-    value.targetAmount === undefined ||
-    !value.startDate ||
-    !value.endDate ||
-    !value.categoryId ||
-    !value.userId
-  ) {
+export async function createGoal(value: GoalInput): Promise<void> {
+  const deadline = (value as any).deadline ?? (value as any).endDate;
+
+  if (!value.name || (value as any).targetAmount === undefined || !deadline) {
     throw new Error("Invalid user input");
   }
 
-  // 2. Tarcza na duplikaty
-  const existingGoal = db
-    .select()
-    .from(goals)
-    .where(eq(goals.id, value.id))
-    .get();
+  const table =
+    (financialGoals as any) ?? (require("@/shared/schema") as any).goals;
 
-  if (existingGoal) {
-    throw new Error("Goal with this ID already exists");
+  if ((value as any).id) {
+    const existing = db
+      .select()
+      .from(table)
+      .where(eq(table.id, (value as any).id))
+      .get();
+
+    if (existing) {
+      throw new Error("Goal with this ID already exists");
+    }
   }
 
-  // 3. Prawdziwy, twardy zapis do SQLite! (Z uwzględnieniem nowej architektury)
-  db.insert(goals)
+  // Normalize: strip time portion if full ISO string was passed
+  const toDateStr = (val: string | undefined): string => {
+    if (!val) return new Date().toISOString().split("T")[0];
+    return val.includes("T") ? val.split("T")[0] : val;
+  };
+
+  await db
+    .insert(table)
     .values({
-      id: value.id,
-      userId: Number(value.userId), // Upewniamy się, że to liczba, tak jak oczekuje baza
-      goalType: value.goalType || "saving",
-      categoryId: value.categoryId,
+      userId: (value as any).userId ?? DEFAULT_USER_ID,
+      goalType: (value as any).goalType ?? "saving",
+      categoryId: (value as any).categoryId ?? null,
       name: value.name,
-      targetAmount: value.targetAmount,
-      currentAmount:
-        value.currentAmount !== undefined ? value.currentAmount : 0,
-      startDate: value.startDate,
-      endDate: value.endDate, // Zastępuje stare 'deadline'
-      alertMessage: value.alertMessage,
-      createdAt: value.createdAt || new Date().toISOString(),
-      userId: DEFAULT_USER_ID,
-      goalType: "savings",
+      targetAmount: (value as any).targetAmount,
+      currentAmount: (value as any).currentAmount ?? 0,
+      startDate: toDateStr((value as any).startDate),
+      endDate: toDateStr(deadline),
+      alertMessage: undefined,
     })
     .run();
 }
@@ -58,36 +87,40 @@ export async function updateGoalAmount(
   goalId: string,
   amount: number,
 ): Promise<void> {
-  db.update(goals)
+  const table =
+    (financialGoals as any) ?? (require("@/shared/schema") as any).goals;
+  await db
+    .update(table)
     .set({ currentAmount: amount })
-    .where(eq(goals.id, goalId))
+    .where(eq(table.id, Number(goalId)))
     .run();
 }
 
 export async function deleteGoal(goalId: string): Promise<void> {
-  db.delete(goals).where(eq(goals.id, goalId)).run();
+  const table =
+    (financialGoals as any) ?? (require("@/shared/schema") as any).goals;
+
+  const existing = db
+    .select()
+    .from(table)
+    .where(eq(table.id, Number(goalId)))
+    .get();
+
+  if (!existing) {
+    throw new Error("Goal does not exist.");
+  }
+
+  await db
+    .delete(table)
+    .where(eq(table.id, Number(goalId)))
+    .run();
 }
 
-export async function replaceGoals(values: FinancialGoal[]): Promise<void> {
-  // Czyścimy tabelę celów i wstawiamy całą nową paczkę
-  db.delete(goals).run();
-
-  if (values.length > 0) {
-    // Odpowiednio mapujemy obiekty, aby upewnić się, że typy idące do bazy są poprawne
-    const mappedValues = values.map((v) => ({
-      id: v.id,
-      userId: Number(v.userId),
-      goalType: v.goalType || "saving",
-      categoryId: v.categoryId,
-      name: v.name,
-      targetAmount: v.targetAmount,
-      currentAmount: v.currentAmount !== undefined ? v.currentAmount : 0,
-      startDate: v.startDate,
-      endDate: v.endDate,
-      alertMessage: v.alertMessage,
-      createdAt: v.createdAt || new Date().toISOString(),
-    }));
-
-    db.insert(goals).values(mappedValues).run();
+export async function replaceGoals(values: SavingsGoal[]): Promise<void> {
+  const table =
+    (financialGoals as any) ?? (require("@/shared/schema") as any).goals;
+  await db.delete(table).run();
+  for (const goal of values) {
+    await createGoal(goal);
   }
 }
