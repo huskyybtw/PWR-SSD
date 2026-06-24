@@ -49,11 +49,14 @@ export type NewFinancialGoal = typeof financialGoals.$inferInsert;
 // --- TABELA: ALERTS ---
 export const alerts = sqliteTable("alerts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id),
+  userId: integer("user_id").notNull().default(1),
   goalId: integer("goal_id").references(() => financialGoals.id),
-  createdDate: text("created_date")
+  type: text("type").notNull().default("goal_achieved"),
+  title: text("title").notNull().default(""),
+  message: text("message").notNull().default(""),
+  read: integer("read", { mode: "boolean" }).notNull().default(false),
+  relatedId: text("related_id"),
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
