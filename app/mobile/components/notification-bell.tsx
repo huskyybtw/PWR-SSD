@@ -1,6 +1,13 @@
 import { AlertTriangle, Bell, CheckCircle2, X } from "lucide-react-native";
+import {
+  Modal,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+  RefreshControl,
+} from "react-native";
 import React, { useState } from "react";
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 import { useFinance } from "@/app/_finance-context";
 import { Colors } from "@/constants/colors";
@@ -8,7 +15,13 @@ import { formatDate } from "@/shared/utils";
 
 export function NotificationBell() {
   const [visible, setVisible] = useState(false);
-  const { alerts, unreadAlertsCount, markAlertRead } = useFinance();
+  const {
+    alerts,
+    unreadAlertsCount,
+    markAlertRead,
+    isRefreshing,
+    refreshAlerts,
+  } = useFinance();
 
   return (
     <>
@@ -39,15 +52,26 @@ export function NotificationBell() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={refreshAlerts}
+                  tintColor={Colors.primary}
+                  colors={[Colors.primary]}
+                />
+              }
+            >
               {alerts.length === 0 ? (
                 <View className="items-center py-15 gap-3">
                   <Bell size={32} color={Colors.textMuted} />
-                  <Text className="text-appText text-base font-semibold">
+                  <Text className="text-appText-text text-base font-semibold">
                     No notifications yet
                   </Text>
                   <Text className="text-appText-muted text-[13px] text-center px-5">
-                    Alerts about budgets and goals will appear here
+                    Alerts about budgets and goals will appear here. Pull down
+                    to refresh data.
                   </Text>
                 </View>
               ) : (

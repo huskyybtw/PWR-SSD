@@ -7,7 +7,6 @@ import { useCategoriesService } from "@/services/categories-service";
 import { useGoalsService } from "@/services/goals-service";
 import { getReportData } from "@/services/reports-service";
 import { useTransactionsService } from "@/services/transactions-service";
-import { autoCategorize } from "@/repositories/categories-repository";
 import {
   Budget,
   BudgetStatus,
@@ -30,13 +29,17 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
   const updateTransactionCategory = transactionsState.updateTransactionCategory;
   const deleteTransaction = transactionsState.deleteTransaction;
   const importFromReceiptImage = transactionsState.importFromReceiptImage;
-  const importFromStatementDocument = transactionsState.importFromStatementDocument;
+  const importFromStatementDocument =
+    transactionsState.importFromStatementDocument;
 
   const addBudget = budgetsState.addBudget;
   const deleteBudget = budgetsState.deleteBudget;
   const addGoal = goalsState.addGoal;
   const deleteGoal = goalsState.deleteGoal;
   const addCategory = categoriesState.addCategory;
+
+  const isRefreshing = alertsState.isRefreshing;
+  const refreshAlerts = alertsState.refreshAlerts;
 
   const updateGoalAmount = useCallback(
     async (goalId: string, amount: number) => {
@@ -77,12 +80,12 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
     return budgetsState.getBudgetStatuses(txs);
   }
 
-  function getReportDataForRange(
-    startDate: string,
-    endDate: string,
-  ): ReportData {
-    return getReportData(transactionsState.transactions, startDate, endDate);
-  }
+  const getReportDataForRange = useCallback(
+    (startDate: string, endDate: string): ReportData => {
+      return getReportData(transactionsState.transactions, startDate, endDate);
+    },
+    [transactionsState.transactions],
+  );
 
   const unreadAlertsCount = alertsState.unreadAlertsCount;
   const isReady =
@@ -119,5 +122,7 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
     getReportData: getReportDataForRange,
     addAlert: alertsState.addAlert,
     markAlertRead: alertsState.markAlertRead,
+    isRefreshing,
+    refreshAlerts,
   };
 });

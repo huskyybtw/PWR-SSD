@@ -120,10 +120,9 @@ export default function ReportsScreen() {
     }
   }, [range]);
 
-  const report = useMemo(
-    () => getReportData(dateRange.start, dateRange.end),
-    [getReportData, dateRange.start, dateRange.end],
-  );
+  const report = useMemo(() => {
+    return getReportData(dateRange.start, dateRange.end);
+  }, [getReportData, dateRange.start, dateRange.end]);
 
   const categoryChartData = useMemo(() => {
     return Object.entries(report.categoryBreakdown)

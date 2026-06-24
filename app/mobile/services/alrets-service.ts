@@ -6,50 +6,54 @@ import {
   markAlertRead,
 } from "@/repositories/alerts-repository";
 import { AlertMessage } from "@/shared/types/finance";
-import { generateId } from "@/shared/utils";
 
 export function useAlertsService() {
   const [alerts, setLocalAlerts] = useState<AlertMessage[]>([]);
   const [isReady, setIsReady] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadAlerts = useCallback(async () => {
+    const storedAlerts = await listAlerts();
+    if (storedAlerts) {
+      setLocalAlerts(storedAlerts);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
 
-    async function load() {
-      const storedAlerts = await listAlerts();
-
+    async function initialLoad() {
+      await loadAlerts();
       if (!active) return;
-
-      if (storedAlerts) {
-        setLocalAlerts(storedAlerts);
-      }
-
       setIsReady(true);
     }
 
-    load();
+    initialLoad();
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [loadAlerts]);
+
+  const refreshAlerts = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await loadAlerts();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadAlerts]);
 
   const addAlert = useCallback(
     async (alert: Omit<AlertMessage, "id" | "createdAt" | "read">) => {
-      const newAlert: AlertMessage = {
-        ...alert,
-        id: generateId(),
-        createdAt: new Date().toISOString(),
-        read: false,
-      };
+      // 1. Fire the repository insert statement first and await the actual SQLite row returns
+      const persistedAlert = await createAlert(alert);
 
-      setLocalAlerts((current) => {
-        const next = [newAlert, ...current];
-        createAlert(newAlert);
-        return next;
-      });
+      // 2. Commit the validated entity down to local React UI state counters
+      setLocalAlerts((current) => [persistedAlert, ...current]);
 
-      return newAlert;
+      // 3. Return the exact database-synced alert back to callers
+      return persistedAlert;
     },
     [],
   );
@@ -66,7 +70,10 @@ export function useAlertsService() {
 
   return {
     alerts,
+    unreadAlerts: alerts.filter((alert) => !alert.read),
     isReady,
+    isRefreshing,
+    refreshAlerts,
     addAlert,
     markAlertRead: markRead,
     unreadAlertsCount: alerts.filter((alert) => !alert.read).length,
