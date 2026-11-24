@@ -9,16 +9,16 @@
   Afterwards a media scan is triggered so the Android Photo Picker sees them.
 
 .EXAMPLE
-  .\push-to-emulator.ps1
-  .\push-to-emulator.ps1 -Serial emulator-5556
-  .\push-to-emulator.ps1 -Source C:\path\to\more\receipts
+  .\scripts\push-to-emulator.ps1
+  .\scripts\push-to-emulator.ps1 -Serial emulator-5556
+  .\scripts\push-to-emulator.ps1 -Source C:\path\to\more\receipts
   npm run push:test-files
 #>
 param(
   # adb device serial; optional when exactly one device is connected
   [string]$Serial = "",
-  # folder with files to push (defaults to ./test-data next to this script)
-  [string]$Source = (Join-Path $PSScriptRoot "test-data")
+  # folder with files to push (defaults to assets/images/test-data)
+  [string]$Source = (Join-Path $PSScriptRoot "..\assets\images\test-data")
 )
 
 $ErrorActionPreference = "Stop"

@@ -2,13 +2,16 @@
 # Pushes test receipts / bank statements to a running Android emulator.
 #   images (*.jpg|*.jpeg|*.png|*.webp) -> /sdcard/Pictures/TestReceipts/
 #   documents (*.pdf)                  -> /sdcard/Download/
-# Usage: ./push-to-emulator.sh [-s <serial>] [source-dir]
+# Usage: ./scripts/push-to-emulator.sh [-s <serial>] [source-dir]
 set -euo pipefail
+# Git Bash on Windows would rewrite /sdcard/... into Windows paths.
+export MSYS_NO_PATHCONV=1
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# pwd -W gives a Windows path in Git Bash (adb.exe needs it); plain pwd elsewhere.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && (pwd -W 2>/dev/null || pwd))"
 SERIAL=""
 if [[ "${1:-}" == "-s" ]]; then SERIAL="$2"; shift 2; fi
-SOURCE="${1:-$SCRIPT_DIR/test-data}"
+SOURCE="${1:-$SCRIPT_DIR/../assets/images/test-data}"
 
 ADB="$(command -v adb || true)"
 if [[ -z "$ADB" ]]; then

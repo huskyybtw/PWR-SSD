@@ -16,16 +16,16 @@ Each folder in `sessions/` is one saved session.
 7. Enter a session name (e.g. `P1 T1-T4`) and tap **Save session**, or
    **Discard** to throw it away.
    The first save asks for a folder – choose **Download**.
-8. On the computer, with the phone connected over USB / the emulator running:
+8. On the computer, with the phone connected over USB / the emulator running,
+   in `app/mobile`:
 
    ```
-   cd app/mobile
    npm run uat:pull
    ```
 
    Sessions are copied from `Download/uat_tests/sessions/` on the phone into
-   `uat_tests/sessions/<name>/` here, together with the screen recordings that
-   were finished during the session.
+   `app/mobile/uat_tests/sessions/<name>/` (gitignored), together with the
+   screen recordings that were finished during the session.
 
    - `npm run uat:pull -- --delete` also removes the copied files from the phone.
    - `npm run uat:pull -- --force` copies a session again.
@@ -65,4 +65,4 @@ Typed text is not logged – only which control was tapped.
 - **Alert noticed (T2)** – time from the moderator's expense to the first tap on
   the Dashboard alert.
 
-Videos are large; consider Git LFS before committing many sessions.
+`sessions/` is in `.gitignore` – recordings stay local (videos are large).

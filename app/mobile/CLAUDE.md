@@ -2,15 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Repository layout
+## Project
 
-- `app/mobile/` – the only code: an Expo (SDK 54) / React Native personal-finance app ("Budget Analysis"). **Run all commands from here.**
-- `uat_tests/` – usability-test sessions pulled from the phone (`sessions/<name>/`), see `uat_tests/README.md`.
-- `raporty/` – university course documents (not code).
+An Expo (SDK 54) / React Native personal-finance app ("Budget Analysis"). This folder (`app/mobile`) is the whole app; run all commands from here. The UI is in English; the target data is Polish (PLN, Polish banks/shops like Biedronka, PKO BP).
 
-The UI is in English; the target data is Polish (PLN, Polish banks/shops like Biedronka, PKO BP).
+`uat_tests/` holds the usability-test tooling docs (`uat_tests/README.md`); pulled sessions go to `uat_tests/sessions/` (gitignored).
 
-## Commands (in `app/mobile`)
+## Commands
 
 ```bash
 npm run android            # expo start --android (Expo Go on the emulator)
@@ -21,13 +19,14 @@ npx jest shared/duplicates.test.ts            # one test file
 npx jest -t "skips a re-imported statement"   # one test by name
 npm run db:generate        # drizzle-kit: generate a migration from shared/schema.ts
 npm run push:test-files    # push assets/images/test-data (receipt jpg, statement pdf) to the emulator
-npm run uat:pull           # copy UAT sessions (+ screen recordings) from the phone into ../../uat_tests/sessions
+python scripts/generate-icons.py  # regenerate icon / adaptive-icon / splash-icon / favicon (needs Pillow)
+npm run uat:pull           # copy UAT sessions (+ screen recordings) from the phone into uat_tests/sessions
 npm run uat:taps -- on|off # Android "show taps"
 ```
 
 - Install/upgrade Expo packages with `npx expo install <pkg>` (`npx expo install --check` to verify). Versions must match SDK 54; mismatched native modules break at runtime in Expo Go.
 - `.npmrc` has `legacy-peer-deps=true`.
-- `EXPO_PUBLIC_GEMINI_API_KEY` in `app/mobile/.env` (see `.env.example`); it is bundled into the client.
+- `EXPO_PUBLIC_GEMINI_API_KEY` in `.env` (see `.env.example`); it is bundled into the client.
 - Development is on Windows; the adb helper scripts find adb via PATH, `ANDROID_HOME` or `%LOCALAPPDATA%\Android\Sdk`.
 
 ## Architecture
