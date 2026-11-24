@@ -4,6 +4,14 @@ import { db } from "@/shared/client";
 import { categories } from "@/shared/schema";
 import { CategoryKeywordMap } from "@/shared/types/finance";
 
+/** Income transactions always use this category and nothing else. */
+export const INCOME_CATEGORY = "Income";
+
+/** Categories that can be chosen for an expense. */
+export function expenseCategories(all: string[]): string[] {
+  return all.filter((c) => c !== INCOME_CATEGORY);
+}
+
 export const DEFAULT_CATEGORIES = [
   "Food",
   "Transport",
@@ -14,6 +22,7 @@ export const DEFAULT_CATEGORIES = [
   "Education",
   "Travel",
   "Uncategorized",
+  INCOME_CATEGORY,
 ];
 
 export const CATEGORY_KEYWORDS: CategoryKeywordMap = {
@@ -29,6 +38,26 @@ export const CATEGORY_KEYWORDS: CategoryKeywordMap = {
     "burger",
     "supermarket",
     "bakery",
+    "biedronka",
+    "lidl",
+    "zabka",
+    "żabka",
+    "carrefour",
+    "auchan",
+    "kaufland",
+    "netto",
+    "dino",
+    "stokrotka",
+    "lewiatan",
+    "spożyw",
+    "piekarnia",
+    "restauracja",
+    "kawiarnia",
+    "mcdonald",
+    "kfc",
+    "glovo",
+    "pyszne",
+    "wolt",
   ],
   Transport: [
     "uber",
@@ -43,6 +72,16 @@ export const CATEGORY_KEYWORDS: CategoryKeywordMap = {
     "toll",
     "car",
     "transport",
+    "orlen",
+    "circle k",
+    "lotos",
+    "paliwo",
+    "bolt",
+    "jakdojade",
+    "mpk",
+    "pkp",
+    "intercity",
+    "parking",
   ],
   Shopping: [
     "amazon",
@@ -54,6 +93,16 @@ export const CATEGORY_KEYWORDS: CategoryKeywordMap = {
     "fashion",
     "electronics",
     "purchase",
+    "allegro",
+    "rossmann",
+    "hebe",
+    "zalando",
+    "media markt",
+    "mediamarkt",
+    "rtv euro",
+    "ikea",
+    "pepco",
+    "sklep",
   ],
   Entertainment: [
     "netflix",
@@ -78,6 +127,15 @@ export const CATEGORY_KEYWORDS: CategoryKeywordMap = {
     "utility",
     "bill",
     "payment",
+    "czynsz",
+    "prąd",
+    "tauron",
+    "pge",
+    "enea",
+    "orange",
+    "t-mobile",
+    "upc",
+    "ubezpieczenie",
   ],
   Health: [
     "pharmacy",
@@ -89,6 +147,11 @@ export const CATEGORY_KEYWORDS: CategoryKeywordMap = {
     "gym",
     "fitness",
     "wellness",
+    "apteka",
+    "lekarz",
+    "medicover",
+    "luxmed",
+    "dentysta",
   ],
   Education: [
     "tuition",
@@ -130,13 +193,21 @@ export function autoCategorize(description: string): string {
 
 export async function listCategories(): Promise<string[]> {
   const rows = await db.select().from(categories).all();
-
-  if (rows.length === 0) {
-    await replaceCategories(DEFAULT_CATEGORIES);
-    return [...DEFAULT_CATEGORIES];
-  }
-
   return rows.map((category) => category.name);
+}
+
+/** Inserts any default categories that are missing. Safe to call on every start. */
+export async function ensureDefaultCategories(): Promise<void> {
+  const rows = await db.select().from(categories).all();
+  const existing = new Set(rows.map((row) => row.name));
+  const missing = DEFAULT_CATEGORIES.filter((name) => !existing.has(name));
+
+  if (missing.length > 0) {
+    await db
+      .insert(categories)
+      .values(missing.map((name) => ({ name })))
+      .run();
+  }
 }
 
 export async function addCategory(value: string): Promise<void> {

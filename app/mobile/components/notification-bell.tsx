@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 
-import { useFinance } from "@/app/_finance-context";
+import { useFinance } from "@/shared/finance-context";
 import { Colors } from "@/constants/colors";
 import { formatDate } from "@/shared/utils";
 

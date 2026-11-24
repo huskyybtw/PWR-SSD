@@ -58,14 +58,12 @@ export const goals = sqliteTable("goals", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id),
+  // SQLite cannot ALTER TABLE ADD a NOT NULL column without a constant default,
+  // so these columns are nullable and filled in by the repository.
+  userId: integer("user_id").references(() => users.id),
   goalType: text("goal_type").notNull().default("savings"),
   categoryId: integer("category_id").references(() => categories.id),
-  startDate: text("start_date")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  startDate: text("start_date"),
   alertMessage: text("alert_message"),
 });
 
@@ -86,56 +84,7 @@ export const users = sqliteTable("users", {
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
-// --- TABELA: CATEGORIES ---
-export const categories = sqliteTable("categories", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull(),
-  description: text("description"),
-});
-
-export type Category = typeof categories.$inferSelect;
-export type NewCategory = typeof categories.$inferInsert;
-
-// --- TABELA: FINANCIAL GOALS ---
-export const financialGoals = sqliteTable("financial_goals", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-  goalType: text("goal_type").notNull(),
-  categoryId: integer("category_id").references(() => categories.id),
-  name: text("name"),
-  targetAmount: real("target_amount").notNull(),
-  currentAmount: real("current_amount").notNull().default(0),
-  startDate: text("start_date")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  endDate: text("end_date").notNull(),
-  alertMessage: text("alert_message"),
-});
-
-export type FinancialGoal = typeof financialGoals.$inferSelect;
-export type NewFinancialGoal = typeof financialGoals.$inferInsert;
-
-// --- TABELA: ALERTS ---
-export const alerts = sqliteTable("alerts", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: integer("user_id").notNull().default(1),
-  goalId: integer("goal_id").references(() => financialGoals.id),
-  type: text("type").notNull().default("goal_achieved"),
-  title: text("title").notNull().default(""),
-  message: text("message").notNull().default(""),
-  read: integer("read", { mode: "boolean" }).notNull().default(false),
-  relatedId: text("related_id"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-export type Alert = typeof alerts.$inferSelect;
-export type NewAlert = typeof alerts.$inferInsert;
-
-// --- TABELA: TRANSACTION LOGS ---
+// --- NEW TABELA: TRANSACTION LOGS ---
 export const transactionLogs = sqliteTable("transaction_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id")
@@ -150,7 +99,17 @@ export const transactionLogs = sqliteTable("transaction_logs", {
 export type TransactionLog = typeof transactionLogs.$inferSelect;
 export type NewTransactionLog = typeof transactionLogs.$inferInsert;
 
-// --- TABELA: TRANSACTIONS ---
+// --- NEW TABELA: CATEGORIES ---
+export const categories = sqliteTable("categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  description: text("description"),
+});
+
+export type Category = typeof categories.$inferSelect;
+export type NewCategory = typeof categories.$inferInsert;
+
+// --- NEW TABELA: TRANSACTIONS ---
 export const transactions = sqliteTable("transactions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   logId: integer("log_id")
@@ -166,7 +125,7 @@ export const transactions = sqliteTable("transactions", {
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
 
-// --- TABELA: REPORTS ---
+// --- NEW TABELA: REPORTS ---
 export const reports = sqliteTable("reports", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id")
@@ -185,7 +144,7 @@ export const reports = sqliteTable("reports", {
 export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;
 
-// --- TABELA: REPORT TRANSACTIONS (Many-to-Many Join Table) ---
+// --- NEW TABELA: REPORT TRANSACTIONS (Many-to-Many Join Table) ---
 export const reportTransactions = sqliteTable("report_transactions", {
   reportId: integer("report_id")
     .notNull()

@@ -1,3 +1,4 @@
+import { __setGeminiClientForTests } from "@/services/ai/gemini";
 import { processReceiptWithAI } from "./ocr-reader";
 
 describe("Service Layer: processReceiptWithAI", () => {
@@ -17,6 +18,8 @@ describe("Service Layer: processReceiptWithAI", () => {
       },
     };
 
+    __setGeminiClientForTests(mockAI);
+
     mockImportTransactionsFn = jest.fn().mockResolvedValue({
       imported: [
         {
@@ -32,7 +35,6 @@ describe("Service Layer: processReceiptWithAI", () => {
 
   it("should successfully pass receipt data from Gemini down to the import handler", async () => {
     const result = await processReceiptWithAI(
-      mockAI,
       "fake-base64-string",
       "image/jpeg",
       mockImportTransactionsFn,
@@ -61,7 +63,6 @@ describe("Service Layer: processReceiptWithAI", () => {
 
     await expect(
       processReceiptWithAI(
-        mockAI,
         "fake-base64-string",
         "image/jpeg",
         mockImportTransactionsFn,

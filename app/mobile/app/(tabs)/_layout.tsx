@@ -3,7 +3,6 @@ import {
   ArrowRightLeft,
   BarChart3,
   LayoutDashboard,
-  Target,
   Wallet,
 } from "lucide-react-native";
 import React from "react";
@@ -57,7 +56,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="budgets"
           options={{
-            title: "Budgets",
+            title: "Planning",
             tabBarIcon: ({ color }) => <Wallet size={24} color={color} />,
           }}
         />
@@ -66,13 +65,6 @@ export default function TabLayout() {
           options={{
             title: "Reports",
             tabBarIcon: ({ color }) => <BarChart3 size={24} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="goals"
-          options={{
-            title: "Goals",
-            tabBarIcon: ({ color }) => <Target size={24} color={color} />,
           }}
         />
       </Tabs>

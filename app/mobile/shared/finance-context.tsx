@@ -1,10 +1,12 @@
 import createContextHook from "@nkzw/create-context-hook";
 import { useCallback } from "react";
 
+import type { GeminiProgress } from "@/services/ai/gemini";
 import { useAlertsService } from "@/services/alrets-service";
 import { useBudgetsService } from "@/services/budgets-service";
 import { useCategoriesService } from "@/services/categories-service";
 import { useGoalsService } from "@/services/goals-service";
+import { expenseCategories } from "@/repositories/categories-repository";
 import { getReportData } from "@/services/reports-service";
 import { useTransactionsService } from "@/services/transactions-service";
 import {
@@ -15,6 +17,7 @@ import {
   SavingsGoal,
   Transaction,
 } from "@/shared/types/finance";
+import { formatCurrency } from "@/shared/utils";
 
 export const [FinanceProvider, useFinance] = createContextHook(() => {
   const budgetsState = useBudgetsService();
@@ -22,39 +25,54 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
   const alertsState = useAlertsService();
   const categoriesState = useCategoriesService();
 
+  const { goalsRef, updateGoalAmounts } = goalsState;
+  const { addAlert, refreshAlerts } = alertsState;
+
+  const notifyGoalAchieved = useCallback(
+    async (goal: SavingsGoal) => {
+      try {
+        await addAlert({
+          type: "goal_achieved",
+          title: "Goal Achieved! 🎉",
+          message: `Congratulations! You've reached your "${goal.name}" savings goal of ${formatCurrency(goal.targetAmount)}!`,
+          relatedId: goal.id,
+        });
+      } catch (e) {
+        console.error("Goal achieved alert failed", e);
+      }
+    },
+    [addAlert],
+  );
+
+  /**
+   * Automatic goal tracking: income is added to every goal, expenses are
+   * subtracted. All goals are updated in one batch from the current state.
+   */
   const handleGoalsUpdate = useCallback(
     async (income: number, expense: number) => {
-      for (const goal of goalsState.goals) {
-        const wasAchieved = goal.currentAmount >= goal.targetAmount;
+      const currentGoals = goalsRef.current;
+      if (currentGoals.length === 0) return;
 
-        const nextAmount =
+      const updates = currentGoals.map((goal) => ({
+        goal,
+        amount:
           income > 0
             ? goal.currentAmount + income
-            : Math.max(0, goal.currentAmount - expense);
+            : Math.max(0, goal.currentAmount - expense),
+      }));
 
-        const updatedGoal = await goalsState.updateGoalAmount(
-          goal.id,
-          nextAmount,
-        );
+      await updateGoalAmounts(
+        updates.map(({ goal, amount }) => ({ goalId: goal.id, amount })),
+      );
 
-        if (updatedGoal && !wasAchieved && nextAmount >= goal.targetAmount) {
-          try {
-            await alertsState.addAlert({
-              type: "goal_achieved",
-              title: "Goal Achieved! 🎉",
-              message: `Congratulations! You've reached your "${goal.name}" savings goal of ${goal.targetAmount.toFixed(2)}!`,
-              relatedId: goal.id,
-            });
-            await alertsState.refreshAlerts();
-          } catch (e) {
-            console.error("Goal achieved alert failed", e);
-          }
+      for (const { goal, amount } of updates) {
+        const wasAchieved = goal.currentAmount >= goal.targetAmount;
+        if (!wasAchieved && amount >= goal.targetAmount) {
+          await notifyGoalAchieved(goal);
         }
       }
-
-      await alertsState.refreshAlerts();
     },
-    [goalsState.goals, goalsState.updateGoalAmount, alertsState],
+    [goalsRef, updateGoalAmounts, notifyGoalAchieved],
   );
 
   const handleBudgetAlert = useCallback(
@@ -68,26 +86,25 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
     ) => {
       try {
         if (type === "budget_exceeded") {
-          await alertsState.addAlert({
+          await addAlert({
             type: "budget_exceeded",
             title: "Budget Exceeded",
-            message: `Your "${budgetName}" budget of ${amount} has been exceeded. Current spending: ${spent.toFixed(2)}`,
+            message: `Your "${budgetName}" budget of ${formatCurrency(amount)} has been exceeded. Current spending: ${formatCurrency(spent)}`,
             relatedId: budgetId,
           });
         } else {
-          await alertsState.addAlert({
+          await addAlert({
             type: "budget_near_limit",
             title: "Budget Near Limit",
             message: `Your "${budgetName}" budget is at ${percentage.toFixed(0)}%.`,
             relatedId: budgetId,
           });
         }
-        await alertsState.refreshAlerts();
       } catch (e) {
         console.error("Budget alert failed", e);
       }
     },
-    [alertsState],
+    [addAlert],
   );
 
   const transactionsState = useTransactionsService(
@@ -95,47 +112,49 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
     handleBudgetAlert,
   );
 
-  const addTransaction = transactionsState.addTransaction;
-  const importTransactions = transactionsState.importTransactions;
-  const updateTransactionCategory = transactionsState.updateTransactionCategory;
-  const deleteTransaction = transactionsState.deleteTransaction;
-  const importFromReceiptImage = transactionsState.importFromReceiptImage;
-  const importFromStatementDocument =
-    transactionsState.importFromStatementDocument;
+  const categories = categoriesState.categories;
+  const aiCategories = expenseCategories(categories);
 
-  const addBudget = budgetsState.addBudget;
-  const deleteBudget = budgetsState.deleteBudget;
-  const addGoal = goalsState.addGoal;
-  const deleteGoal = goalsState.deleteGoal;
-  const addCategory = categoriesState.addCategory;
+  const importFromReceiptImage = useCallback(
+    (
+      base64Data: string,
+      mimeType: string,
+      onProgress?: (progress: GeminiProgress) => void,
+    ) =>
+      transactionsState.importFromReceiptImage(base64Data, mimeType, {
+        categories: aiCategories,
+        onProgress,
+      }),
+    [transactionsState.importFromReceiptImage, aiCategories],
+  );
 
-  const isRefreshing = alertsState.isRefreshing;
-  const refreshAlerts = alertsState.refreshAlerts;
+  const importFromStatementDocument = useCallback(
+    (
+      base64Data: string,
+      mimeType: string,
+      onProgress?: (progress: GeminiProgress) => void,
+    ) =>
+      transactionsState.importFromStatementDocument(base64Data, mimeType, {
+        categories: aiCategories,
+        onProgress,
+      }),
+    [transactionsState.importFromStatementDocument, aiCategories],
+  );
 
   const updateGoalAmount = useCallback(
     async (goalId: string, amount: number) => {
-      const goal = goalsState.goals.find((g) => g.id === goalId);
+      const goal = goalsRef.current.find((g) => g.id === goalId);
       const wasAchieved = goal ? goal.currentAmount >= goal.targetAmount : true;
 
       const updatedGoal = await goalsState.updateGoalAmount(goalId, amount);
 
       if (updatedGoal && !wasAchieved && amount >= updatedGoal.targetAmount) {
-        try {
-          await alertsState.addAlert({
-            type: "goal_achieved",
-            title: "Goal Achieved! 🎉",
-            message: `Congratulations! You've reached your "${updatedGoal.name}" savings goal of ${updatedGoal.targetAmount.toFixed(2)}!`,
-            relatedId: updatedGoal.id,
-          });
-          await alertsState.refreshAlerts();
-        } catch (e) {
-          console.error("Goal achieved alert failed", e);
-        }
+        await notifyGoalAchieved(updatedGoal);
       }
 
       return updatedGoal;
     },
-    [alertsState, goalsState],
+    [goalsRef, goalsState.updateGoalAmount, notifyGoalAchieved],
   );
 
   function getGoalProgress(goal: SavingsGoal): GoalProgress {
@@ -166,7 +185,6 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
     [transactionsState.transactions],
   );
 
-  const unreadAlertsCount = alertsState.unreadAlertsCount;
   const isReady =
     transactionsState.isReady &&
     budgetsState.isReady &&
@@ -179,29 +197,29 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
     budgets: budgetsState.budgets,
     goals: goalsState.goals,
     alerts: alertsState.alerts,
-    categories: categoriesState.categories,
+    categories,
     isReady,
-    unreadAlertsCount,
-    addTransaction,
-    importTransactions,
-    updateTransactionCategory,
-    deleteTransaction,
+    unreadAlertsCount: alertsState.unreadAlertsCount,
+    addTransaction: transactionsState.addTransaction,
+    importTransactions: transactionsState.importTransactions,
+    updateTransactionCategory: transactionsState.updateTransactionCategory,
+    deleteTransaction: transactionsState.deleteTransaction,
     importFromReceiptImage,
     importFromStatementDocument,
-    addCategory,
-    addBudget,
-    deleteBudget,
-    addGoal,
+    addCategory: categoriesState.addCategory,
+    addBudget: budgetsState.addBudget,
+    deleteBudget: budgetsState.deleteBudget,
+    addGoal: goalsState.addGoal,
     updateGoalAmount,
-    deleteGoal,
+    deleteGoal: goalsState.deleteGoal,
     getBudgetStatus,
     getBudgetStatuses,
     getGoalProgress,
     getGoalProgresses,
     getReportData: getReportDataForRange,
-    addAlert: alertsState.addAlert,
+    addAlert,
     markAlertRead: alertsState.markAlertRead,
-    isRefreshing,
+    isRefreshing: alertsState.isRefreshing,
     refreshAlerts,
   };
 });

@@ -1,3 +1,4 @@
+import { __setGeminiClientForTests } from "@/services/ai/gemini";
 import { processStatementWithAI } from "./statement-analyzer";
 
 describe("Service Layer: processStatementWithAI against PKO Statement", () => {
@@ -35,6 +36,8 @@ describe("Service Layer: processStatementWithAI against PKO Statement", () => {
       },
     };
 
+    __setGeminiClientForTests(mockAI);
+
     mockImportTransactionsFn = jest.fn().mockResolvedValue({
       imported: [
         {
@@ -62,7 +65,6 @@ describe("Service Layer: processStatementWithAI against PKO Statement", () => {
 
   it("should parse multiple rows from PKO statement output payload and pass it down to import engine", async () => {
     const result = await processStatementWithAI(
-      mockAI,
       "fake-statement-base64",
       "application/pdf",
       mockImportTransactionsFn,

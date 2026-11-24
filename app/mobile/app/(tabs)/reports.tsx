@@ -1,25 +1,17 @@
-import {
-  BarChart3,
-  Calendar,
-  ChevronDown,
-  TrendingDown,
-  TrendingUp,
-  X,
-} from "lucide-react-native";
-import React, { useMemo, useState } from "react";
-import {
-  Dimensions,
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import { BarChart3, Calendar, ChevronDown, PieChart, X } from "lucide-react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
-import { useFinance } from "@/app/_finance-context";
-import { NotificationBell } from "@/components/notification-bell";
+import {
+  CategoryBreakdown,
+  ChartMode,
+  ChartModeSwitch,
+} from "@/components/category-breakdown";
+import { DailyTrendChart } from "@/components/daily-trend-chart";
+import { IncomeExpenseCards } from "@/components/income-expense-cards";
 import { Colors } from "@/constants/colors";
-import { formatCurrency, formatShortDate } from "@/shared/utils";
+import { useFinance } from "@/shared/finance-context";
 import {
   endOfMonth,
   endOfWeek,
@@ -30,123 +22,89 @@ import {
   startOfYear,
 } from "date-fns";
 
-const { width } = Dimensions.get("window");
+type PresetKey = "daily" | "weekly" | "monthly" | "yearly";
+type Range = { start: string; end: string; label: string };
 
-const DATE_RANGES = [
-  { key: "daily" as const, label: "Today", days: 1 },
-  { key: "weekly" as const, label: "This Week", days: 7 },
-  { key: "monthly" as const, label: "This Month", days: 30 },
-  { key: "yearly" as const, label: "This Year", days: 365 },
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: "daily", label: "Today" },
+  { key: "weekly", label: "This Week" },
+  { key: "monthly", label: "This Month" },
+  { key: "yearly", label: "This Year" },
 ];
 
-function BarChart({
-  data,
-  maxValue,
-  barColor,
+function presetRange(key: PresetKey): Range {
+  const now = new Date();
+  const d = (date: Date) => format(date, "yyyy-MM-dd");
+  switch (key) {
+    case "daily":
+      return { start: d(now), end: d(now), label: "Today" };
+    case "weekly":
+      return {
+        start: d(startOfWeek(now, { weekStartsOn: 1 })),
+        end: d(endOfWeek(now, { weekStartsOn: 1 })),
+        label: "This Week",
+      };
+    case "yearly":
+      return { start: d(startOfYear(now)), end: d(endOfYear(now)), label: "This Year" };
+    default:
+      return { start: d(startOfMonth(now)), end: d(endOfMonth(now)), label: "This Month" };
+  }
+}
+
+function SectionTitle({
+  icon,
+  title,
+  right,
 }: {
-  data: { label: string; value: number }[];
-  maxValue: number;
-  barColor: string;
+  icon: React.ReactNode;
+  title: string;
+  right?: React.ReactNode;
 }) {
   return (
-    <View className="mb-3">
-      <View className="flex-row items-end justify-around h-[150px] gap-1">
-        {data.map((item, i) => {
-          const height = maxValue > 0 ? (item.value / maxValue) * 120 : 0;
-          return (
-            <View key={i} className="flex-1 items-center">
-              <View className="w-[70%] h-[120px] justify-end bg-appSurface-highlight rounded-md overflow-hidden">
-                <View
-                  className="w-full rounded-md min-h-[4px]"
-                  style={{
-                    height: Math.max(height, 4),
-                    backgroundColor: barColor,
-                  }}
-                />
-              </View>
-              <Text
-                className="text-[9px] text-appText-muted mt-1.5 text-center"
-                numberOfLines={1}
-              >
-                {item.label}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
+    <View className="flex-row items-center gap-2 mb-3">
+      {icon}
+      <Text className="flex-1 text-[17px] font-[700] text-appText">{title}</Text>
+      {right}
     </View>
   );
 }
 
 export default function ReportsScreen() {
   const { getReportData } = useFinance();
-  const [range, setRange] =
-    useState<(typeof DATE_RANGES)[number]["key"]>("monthly");
+  const [preset, setPreset] = useState<PresetKey>("monthly");
+  // A specific period opened from the Dashboard (e.g. "October 2021").
+  const [customRange, setCustomRange] = useState<Range | null>(null);
   const [showRangePicker, setShowRangePicker] = useState(false);
+  const [chartMode, setChartMode] = useState<ChartMode>("circle");
 
-  const dateRange = useMemo(() => {
-    const now = new Date();
-    switch (range) {
-      case "daily":
-        return {
-          start: format(now, "yyyy-MM-dd"),
-          end: format(now, "yyyy-MM-dd"),
-          label: "Today",
-        };
-      case "weekly":
-        return {
-          start: format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd"),
-          end: format(endOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd"),
-          label: "This Week",
-        };
-      case "monthly":
-        return {
-          start: format(startOfMonth(now), "yyyy-MM-dd"),
-          end: format(endOfMonth(now), "yyyy-MM-dd"),
-          label: "This Month",
-        };
-      case "yearly":
-        return {
-          start: format(startOfYear(now), "yyyy-MM-dd"),
-          end: format(endOfYear(now), "yyyy-MM-dd"),
-          label: "This Year",
-        };
-      default:
-        return {
-          start: format(startOfMonth(now), "yyyy-MM-dd"),
-          end: format(endOfMonth(now), "yyyy-MM-dd"),
-          label: "This Month",
-        };
+  // /reports?from=2021-10-01&to=2021-10-31&label=October%202021&ts=123
+  const params = useLocalSearchParams<{
+    from?: string;
+    to?: string;
+    label?: string;
+    ts?: string;
+  }>();
+  useEffect(() => {
+    if (params.ts && params.from && params.to) {
+      setCustomRange({
+        start: params.from,
+        end: params.to,
+        label: params.label || `${params.from} – ${params.to}`,
+      });
     }
-  }, [range]);
+  }, [params.ts, params.from, params.to, params.label]);
 
-  const report = useMemo(() => {
-    return getReportData(dateRange.start, dateRange.end);
-  }, [getReportData, dateRange.start, dateRange.end]);
-
-  const categoryChartData = useMemo(() => {
-    return Object.entries(report.categoryBreakdown)
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
-  }, [report.categoryBreakdown]);
-
-  const dailyChartData = useMemo(() => {
-    return report.dailyTrend.map((d) => ({
-      label: formatShortDate(d.date),
-      value: d.expense,
-    }));
-  }, [report.dailyTrend]);
-
-  const maxCategory = useMemo(
-    () => Math.max(...categoryChartData.map((d) => d.value), 1),
-    [categoryChartData],
+  const dateRange = useMemo(
+    () => customRange ?? presetRange(preset),
+    [customRange, preset],
   );
 
-  const maxDaily = useMemo(
-    () => Math.max(...dailyChartData.map((d) => d.value), 1),
-    [dailyChartData],
+  const report = useMemo(
+    () => getReportData(dateRange.start, dateRange.end),
+    [getReportData, dateRange.start, dateRange.end],
   );
+
+  const hasData = report.totalExpenses > 0 || report.totalIncome > 0;
 
   return (
     <ScrollView
@@ -155,148 +113,112 @@ export default function ReportsScreen() {
     >
       <View className="flex-row justify-between items-center px-5 pt-4 pb-3">
         <Text className="text-[28px] font-[800] text-appText">Reports</Text>
-        <View className="flex-row items-center gap-[10px]">
-          <TouchableOpacity
-            className="flex-row items-center gap-[6px] bg-appSurface px-[14px] py-[8px] rounded-[20px] border border-appBorder"
-            onPress={() => setShowRangePicker(true)}
-          >
-            <Calendar size={14} color={Colors.primary} />
-            <Text className="text-[13px] font-[600] text-appPrimary">
-              {dateRange.label}
-            </Text>
-            <ChevronDown size={14} color={Colors.primary} />
-          </TouchableOpacity>
-          {/* <NotificationBell /> */}
-        </View>
-      </View>
-
-      <View className="flex-row gap-3 px-5 mb-3">
-        <View className="flex-1 rounded-2xl p-4 gap-2 bg-appPrimary-muted">
-          <TrendingUp size={20} color={Colors.primary} />
-          <Text className="text-[12px] text-appText-muted uppercase tracking-[0.5px]">
-            Income
-          </Text>
-          <Text className="text-[20px] font-[800] text-appPrimary">
-            {formatCurrency(report.totalIncome)}
-          </Text>
-        </View>
-        <View className="flex-1 rounded-2xl p-4 gap-2 bg-appDanger-muted">
-          <TrendingDown size={20} color={Colors.danger} />
-          <Text className="text-[12px] text-appText-muted uppercase tracking-[0.5px]">
-            Expenses
-          </Text>
-          <Text className="text-[20px] font-[800] text-appDanger-light">
-            {formatCurrency(report.totalExpenses)}
-          </Text>
-        </View>
-      </View>
-
-      <View className="mx-5 bg-appSurface rounded-2xl p-4 flex-row justify-between items-center mb-6">
-        <Text className="text-[14px] font-[600] text-appText-secondary">
-          Net Balance
-        </Text>
-        <Text
-          className={`text-[24px] font-[800] ${report.netBalance >= 0 ? "text-appPrimary" : "text-appDanger-light"}`}
+        <TouchableOpacity
+          className="flex-row items-center gap-[6px] bg-appSurface px-[14px] h-11 rounded-[22px] border border-appBorder"
+          onPress={() => setShowRangePicker(true)}
         >
-          {formatCurrency(report.netBalance)}
-        </Text>
+          <Calendar size={14} color={Colors.primary} />
+          <Text className="text-[13px] font-[600] text-appPrimary">
+            {dateRange.label}
+          </Text>
+          <ChevronDown size={14} color={Colors.primary} />
+        </TouchableOpacity>
       </View>
 
-      {categoryChartData.length > 0 && (
+      <View className="px-5 mb-6">
+        <IncomeExpenseCards
+          income={report.totalIncome}
+          expenses={report.totalExpenses}
+        />
+      </View>
+
+      {report.totalExpenses > 0 && (
         <View className="mb-6 px-5">
-          <View className="flex-row items-center gap-2 mb-3">
-            <BarChart3 size={18} color={Colors.primary} />
-            <Text className="text-[17px] font-[700] text-appText">
-              Spending by Category
-            </Text>
-          </View>
-          <View className="bg-appSurface rounded-2xl p-4">
-            <BarChart
-              data={categoryChartData}
-              maxValue={maxCategory}
-              barColor={Colors.primary}
-            />
-            <View className="gap-2 pt-3 border-t border-appBorder">
-              {categoryChartData.map((item, i) => (
-                <View key={i} className="flex-row items-center gap-[10px]">
-                  <View
-                    className="w-[10px] h-[10px] rounded-full"
-                    style={{
-                      backgroundColor:
-                        Colors.chartColors[i % Colors.chartColors.length],
-                    }}
-                  />
-                  <Text className="flex-1 text-[13px] text-appText-secondary">
-                    {item.label}
-                  </Text>
-                  <Text className="text-[13px] font-[600] text-appText">
-                    {formatCurrency(item.value)}
-                  </Text>
-                </View>
-              ))}
-            </View>
+          <SectionTitle
+            icon={<PieChart size={18} color={Colors.primary} />}
+            title="Spending by Category"
+            right={<ChartModeSwitch mode={chartMode} onChange={setChartMode} />}
+          />
+          <CategoryBreakdown
+            breakdown={report.categoryBreakdown}
+            emptyText="No expenses in this period."
+            mode={chartMode}
+            limit={6}
+          />
+        </View>
+      )}
+
+      {report.totalExpenses > 0 && (
+        <View className="mb-6 px-5">
+          <SectionTitle
+            icon={<BarChart3 size={18} color={Colors.accent} />}
+            title="Spending Trend"
+          />
+          <View className="bg-appSurface rounded-2xl p-4 border border-appBorder">
+            <DailyTrendChart points={report.dailyTrend} />
           </View>
         </View>
       )}
 
-      {dailyChartData.length > 0 && dailyChartData.some((d) => d.value > 0) && (
-        <View className="mb-6 px-5">
-          <View className="flex-row items-center gap-2 mb-3">
-            <BarChart3 size={18} color={Colors.accent} />
-            <Text className="text-[17px] font-[700] text-appText">
-              Daily Spending Trend
-            </Text>
-          </View>
-          <View className="bg-appSurface rounded-2xl p-4">
-            <BarChart
-              data={dailyChartData}
-              maxValue={maxDaily}
-              barColor={Colors.accent}
-            />
-          </View>
-        </View>
-      )}
-
-      {Object.keys(report.categoryBreakdown).length === 0 && (
-        <View className="items-center py-15">
+      {!hasData && (
+        <View className="items-center py-16">
           <Text className="text-appText text-[16px] font-[600]">
-            No data for this period
+            No data for {dateRange.label}
           </Text>
           <Text className="text-appText-muted text-[13px] mt-1">
-            Add transactions to see reports
+            Pick another period or add transactions
           </Text>
         </View>
       )}
 
       <View style={{ height: 40 }} />
 
-      <Modal visible={showRangePicker} animationType="fade" transparent>
+      <Modal
+        visible={showRangePicker}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowRangePicker(false)}
+      >
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-[20px] font-[700] text-appText">
                 Select Period
               </Text>
-              <TouchableOpacity onPress={() => setShowRangePicker(false)}>
+              <TouchableOpacity
+                onPress={() => setShowRangePicker(false)}
+                className="w-11 h-11 items-center justify-center -mr-2"
+              >
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
-            {DATE_RANGES.map((r) => (
-              <TouchableOpacity
-                key={r.key}
-                className={`py-4 border-b border-appBorder ${range === r.key ? "bg-appPrimary-muted -mx-5 px-5" : ""}`}
-                onPress={() => {
-                  setRange(r.key);
-                  setShowRangePicker(false);
-                }}
-              >
-                <Text
-                  className={`text-[16px] ${range === r.key ? "text-appPrimary font-[700]" : "text-appText"}`}
-                >
-                  {r.label}
+            {customRange && (
+              <View className="py-4 border-b border-appBorder bg-appPrimary-muted -mx-5 px-5">
+                <Text className="text-[16px] text-appPrimary font-[700]">
+                  {customRange.label}
                 </Text>
-              </TouchableOpacity>
-            ))}
+              </View>
+            )}
+            {PRESETS.map((r) => {
+              const active = !customRange && preset === r.key;
+              return (
+                <TouchableOpacity
+                  key={r.key}
+                  className={`py-4 border-b border-appBorder ${active ? "bg-appPrimary-muted -mx-5 px-5" : ""}`}
+                  onPress={() => {
+                    setCustomRange(null);
+                    setPreset(r.key);
+                    setShowRangePicker(false);
+                  }}
+                >
+                  <Text
+                    className={`text-[16px] ${active ? "text-appPrimary font-[700]" : "text-appText"}`}
+                  >
+                    {r.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       </Modal>

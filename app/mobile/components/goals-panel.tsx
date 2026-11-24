@@ -1,13 +1,12 @@
 import {
   Calendar,
   CheckCircle2,
-  Plus,
   Target,
   Trash2,
   TrendingUp,
   X,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -19,28 +18,44 @@ import {
   View,
 } from "react-native";
 
-import { useFinance } from "@/app/_finance-context";
-import { NotificationBell } from "@/components/notification-bell";
+import { useFinance } from "@/shared/finance-context";
 import { Colors } from "@/constants/colors";
-import { formatCurrency, formatDate } from "@/shared/utils";
+import { formatCurrency, formatDate, toIsoDate } from "@/shared/utils";
 
-export default function GoalsScreen() {
+/**
+ * When `openCreate` is true the "new" form opens once and `onCreateOpened`
+ * is called so the parent can clear the request.
+ */
+export function GoalsPanel({
+  openCreate = false,
+  onCreateOpened,
+}: {
+  openCreate?: boolean;
+  onCreateOpened?: () => void;
+}) {
   const { goals, getGoalProgresses, addGoal, updateGoalAmount, deleteGoal } =
     useFinance();
   const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    if (openCreate) {
+      setShowModal(true);
+      onCreateOpened?.();
+    }
+  }, [openCreate, onCreateOpened]);
   const [showContributeModal, setShowContributeModal] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
-  const [deadline, setDeadline] = useState(
-    new Date(new Date().getFullYear(), 11, 31).toISOString().split("T")[0],
+  const [deadline, setDeadline] = useState(() =>
+    toIsoDate(new Date(new Date().getFullYear(), 11, 31)),
   );
   const [contributeAmount, setContributeAmount] = useState("");
 
   const progresses = getGoalProgresses();
 
   async function handleAdd() {
-    const amt = parseFloat(targetAmount);
+    const amt = parseFloat(targetAmount.replace(",", "."));
     if (!name.trim() || isNaN(amt) || amt <= 0) {
       Alert.alert("Error", "Please fill all fields correctly.");
       return;
@@ -60,31 +75,24 @@ export default function GoalsScreen() {
   }
 
   async function handleContribute() {
-    const amt = parseFloat(contributeAmount);
-    if (isNaN(amt) || amt <= 0 || !selectedGoalId) return;
+    const amt = parseFloat(contributeAmount.replace(",", "."));
+    if (isNaN(amt) || amt <= 0 || !selectedGoalId) {
+      Alert.alert("Error", "Please enter a valid amount.");
+      return;
+    }
     const goal = goals.find((g) => g.id === selectedGoalId);
     if (!goal) return;
-    await updateGoalAmount(selectedGoalId, goal.currentAmount + amt);
-    setShowContributeModal(false);
-    setContributeAmount("");
+    try {
+      await updateGoalAmount(selectedGoalId, goal.currentAmount + amt);
+      setShowContributeModal(false);
+      setContributeAmount("");
+    } catch (e) {
+      Alert.alert("Error", (e as Error).message);
+    }
   }
 
   return (
     <View className="flex-1 bg-appBackground">
-      <View className="px-5 pt-4 pb-3">
-        <View className="flex-row justify-between items-start">
-          <View>
-            <Text className="text-[28px] font-extrabold text-appText">
-              Savings Goals
-            </Text>
-            <Text className="text-sm text-appText-muted mt-0.5">
-              Track your progress toward targets
-            </Text>
-          </View>
-          {/* <NotificationBell /> */}
-        </View>
-      </View>
-
       <FlatList
         data={progresses}
         keyExtractor={(item) => item.goal.id}
@@ -122,13 +130,20 @@ export default function GoalsScreen() {
                 </Text>
               </View>
               <TouchableOpacity
+                className="w-11 h-11 items-center justify-center -m-2"
                 onPress={() =>
                   Alert.alert("Delete Goal", "Are you sure?", [
                     { text: "Cancel", style: "cancel" },
                     {
                       text: "Delete",
                       style: "destructive",
-                      onPress: () => deleteGoal(item.goal.id),
+                      onPress: async () => {
+                        try {
+                          await deleteGoal(item.goal.id);
+                        } catch (e) {
+                          Alert.alert("Error", (e as Error).message);
+                        }
+                      },
                     },
                   ])
                 }
@@ -219,12 +234,6 @@ export default function GoalsScreen() {
         }
       />
 
-      <TouchableOpacity
-        className="absolute right-5 bottom-6 w-14 h-14 rounded-full bg-appPrimary items-center justify-center shadow-md shadow-appPrimary elevation-5"
-        onPress={() => setShowModal(true)}
-      >
-        <Plus size={24} color="#fff" />
-      </TouchableOpacity>
 
       <Modal visible={showModal} animationType="slide" transparent>
         <View className="flex-1 bg-black/60 justify-end">
@@ -233,7 +242,10 @@ export default function GoalsScreen() {
               <Text className="text-xl font-bold text-appText">
                 New Savings Goal
               </Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
+              <TouchableOpacity
+                onPress={() => setShowModal(false)}
+                className="w-11 h-11 items-center justify-center -mr-2"
+              >
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
@@ -292,7 +304,10 @@ export default function GoalsScreen() {
               <Text className="text-xl font-bold text-appText">
                 Add to Goal
               </Text>
-              <TouchableOpacity onPress={() => setShowContributeModal(false)}>
+              <TouchableOpacity
+                onPress={() => setShowContributeModal(false)}
+                className="w-11 h-11 items-center justify-center -mr-2"
+              >
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>

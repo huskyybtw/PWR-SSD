@@ -8,23 +8,7 @@ export interface Transaction {
   category: string;
   type: TransactionType;
   createdAt: string;
-  source: "manual" | "import" | "receipt" | "statement";
-}
-
-export interface SavingsGoal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  currentAmount: number;
-  deadline: string;
-  createdAt?: string;
-}
-
-export interface GoalProgress {
-  goal: SavingsGoal;
-  percentage: number;
-  isAchieved: boolean;
-  daysRemaining: number;
+  source?: "manual" | "import";
 }
 
 export interface Budget {
@@ -45,6 +29,22 @@ export interface BudgetStatus {
   percentage: number;
   isExceeded: boolean;
   isNearLimit: boolean;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline: string;
+  createdAt: string;
+}
+
+export interface GoalProgress {
+  goal: SavingsGoal;
+  percentage: number;
+  isAchieved: boolean;
+  daysRemaining: number;
 }
 
 export interface AlertMessage {

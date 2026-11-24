@@ -13,9 +13,15 @@ export function useAlertsService() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadAlerts = useCallback(async () => {
-    const storedAlerts = await listAlerts();
-    if (storedAlerts) {
-      setLocalAlerts(storedAlerts);
+    try {
+      const storedAlerts = await listAlerts();
+      setLocalAlerts(
+        [...storedAlerts].sort((a, b) =>
+          (b.createdAt ?? "").localeCompare(a.createdAt ?? ""),
+        ),
+      );
+    } catch (error) {
+      console.error("Failed to load alerts", error);
     }
   }, []);
 
@@ -56,13 +62,16 @@ export function useAlertsService() {
   );
 
   const markRead = useCallback(async (alertId: string) => {
-    setLocalAlerts((current) => {
-      const next = current.map((alert) =>
+    try {
+      await markAlertRead(alertId);
+    } catch (error) {
+      console.error("Failed to mark alert as read", error);
+    }
+    setLocalAlerts((current) =>
+      current.map((alert) =>
         alert.id === alertId ? { ...alert, read: true } : alert,
-      );
-      markAlertRead(alertId);
-      return next;
-    });
+      ),
+    );
   }, []);
 
   return {

@@ -4,7 +4,6 @@ import {
   addCategory as addCategoryToRepository,
   DEFAULT_CATEGORIES,
   listCategories,
-  replaceCategories,
 } from "@/repositories/categories-repository";
 
 export function useCategoriesService() {
@@ -15,18 +14,18 @@ export function useCategoriesService() {
     let active = true;
 
     async function load() {
-      const storedCategories = await listCategories();
-
-      if (!active) return;
-
-      if (storedCategories && storedCategories.length > 0) {
-        setLocalCategories(storedCategories);
-      } else {
-        setLocalCategories(DEFAULT_CATEGORIES);
-        await replaceCategories(DEFAULT_CATEGORIES);
+      try {
+        const storedCategories = await listCategories();
+        if (!active) return;
+        setLocalCategories(
+          storedCategories.length > 0 ? storedCategories : DEFAULT_CATEGORIES,
+        );
+      } catch (error) {
+        console.error("Failed to load categories", error);
+        if (active) setLocalCategories(DEFAULT_CATEGORIES);
+      } finally {
+        if (active) setIsReady(true);
       }
-
-      setIsReady(true);
     }
 
     load();
@@ -36,13 +35,17 @@ export function useCategoriesService() {
     };
   }, []);
 
-  const addCategory = useCallback(async (name: string) => {
-    setLocalCategories((current) => {
-      if (current.includes(name)) return current;
-      const next = [...current, name];
-      addCategoryToRepository(name);
-      return next;
-    });
+  const addCategory = useCallback(async (value: string) => {
+    const name = value.trim();
+    if (!name) throw new Error("Category name cannot be empty.");
+    // Persist first so the category can be used right away.
+    await addCategoryToRepository(name);
+    setLocalCategories((current) =>
+      current.some((c) => c.toLowerCase() === name.toLowerCase())
+        ? current
+        : [...current, name],
+    );
+    return name;
   }, []);
 
   return { categories, isReady, addCategory };

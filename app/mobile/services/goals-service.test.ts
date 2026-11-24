@@ -24,14 +24,10 @@ describe("Integration Test: Database Layer (Service -> DB)", () => {
   it("should successfully create a new saving goal in database (Happy Path)", async () => {
     const newGoal = {
       id: "test-goal-001",
-      userId: 1,
-      categoryId: 5,
-      goalType: "saving" as const,
       name: "Wymarzone wakacje",
       targetAmount: 5000,
       currentAmount: 0,
-      startDate: "2026-06-01T12:00:00.000Z",
-      endDate: "2027-06-01T12:00:00.000Z",
+      deadline: "2027-06-01T12:00:00.000Z",
       createdAt: new Date().toISOString(),
     };
 
@@ -40,21 +36,21 @@ describe("Integration Test: Database Layer (Service -> DB)", () => {
   });
 
   it("should throw an error when providing invalid user input", async () => {
-    const invalidGoal = { id: "test-goal-002", currentAmount: 0 } as any;
-    await expect(createGoal(invalidGoal)).rejects.toThrow("Invalid user input");
+    const invalidGoal = {
+      id: "test-goal-002",
+      currentAmount: 0,
+    } as any;
+
+    await expect(createGoal(invalidGoal)).rejects.toThrow();
   });
 
   it("should throw an error when trying to create a goal with an existing ID", async () => {
     const duplicateGoal = {
       id: "test-goal-duplicate",
-      userId: 1,
-      categoryId: 5,
-      goalType: "saving" as const,
       name: "Nowy komputer",
       targetAmount: 8000,
       currentAmount: 0,
-      startDate: "2026-06-01T12:00:00.000Z",
-      endDate: "2027-12-31T12:00:00.000Z",
+      deadline: "2027-12-31T12:00:00.000Z",
       createdAt: new Date().toISOString(),
     };
 

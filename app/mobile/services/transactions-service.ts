@@ -2,206 +2,221 @@ import { listBudgets } from "@/repositories/budgets-repository";
 import {
   autoCategorize,
   DEFAULT_CATEGORIES,
+  INCOME_CATEGORY,
 } from "@/repositories/categories-repository";
 import {
   createTransaction,
   deleteTransaction,
+  insertTransactions,
   listTransactions,
-  replaceTransactions,
   updateTransactionCategory,
 } from "@/repositories/transactions-repository";
+import {
+  isDuplicateTransaction,
+  partitionNewTransactions,
+} from "@/shared/duplicates";
 import { Transaction, TransactionType } from "@/shared/types/finance";
 import { generateId } from "@/shared/utils";
-import { GoogleGenAI } from "@google/genai";
 import {
   addDays,
   endOfMonth,
   endOfWeek,
   endOfYear,
+  parseISO,
   startOfDay,
   startOfMonth,
   startOfWeek,
   startOfYear,
 } from "date-fns";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { AiImportOptions } from "./transactions/ocr-reader";
 import { processReceiptWithAI } from "./transactions/ocr-reader";
 import { processStatementWithAI } from "./transactions/statement-analyzer";
 
-const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || "";
-const cleanKey = apiKey.trim();
+export type RawTransactionInput = {
+  amount: number;
+  description: string;
+  date: string;
+  type?: TransactionType;
+  category?: string;
+};
 
-if (!apiKey) {
-  console.warn(
-    "Warning: EXPO_PUBLIC_GEMINI_API_KEY is not defined in your environment variables.",
-  );
-}
-
-const ai = new GoogleGenAI({ apiKey: cleanKey });
+type BudgetAlertFn = (
+  type: "budget_exceeded" | "budget_near_limit",
+  budgetName: string,
+  budgetId: string,
+  amount: number,
+  spent: number,
+  percentage: number,
+) => Promise<void>;
 
 export function useTransactionsService(
   onGoalsUpdate?: (income: number, expense: number) => Promise<void>,
-  onBudgetAlert?: (
-    type: "budget_exceeded" | "budget_near_limit",
-    budgetName: string,
-    budgetId: string,
-    amount: number,
-    spent: number,
-    percentage: number,
-  ) => Promise<void>,
+  onBudgetAlert?: BudgetAlertFn,
 ) {
   const [transactions, setLocalTransactions] = useState<Transaction[]>([]);
   const [isReady, setIsReady] = useState(false);
+  // Always-current snapshot so async callbacks never work on stale state.
+  const txRef = useRef<Transaction[]>([]);
+  // Latest callbacks, so memoised functions don't capture stale handlers.
+  const goalsCbRef = useRef(onGoalsUpdate);
+  const budgetCbRef = useRef(onBudgetAlert);
+  goalsCbRef.current = onGoalsUpdate;
+  budgetCbRef.current = onBudgetAlert;
+
+  const setTransactions = useCallback((next: Transaction[]) => {
+    txRef.current = next;
+    setLocalTransactions(next);
+  }, []);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
-      const storedTransactions = await listTransactions();
-      if (!active) return;
-      if (storedTransactions && storedTransactions.length > 0) {
-        setLocalTransactions(storedTransactions);
-      } else {
-        setLocalTransactions([]);
-        await replaceTransactions([]);
+      try {
+        const storedTransactions = await listTransactions();
+        if (active) setTransactions(storedTransactions ?? []);
+      } catch (error) {
+        console.error("Failed to load transactions", error);
+      } finally {
+        if (active) setIsReady(true);
       }
-      setIsReady(true);
     }
 
     load();
     return () => {
       active = false;
     };
-  }, []);
+  }, [setTransactions]);
 
-  async function runGoalsUpdate(income: number, expense: number) {
-    if (!onGoalsUpdate) return;
+  const runGoalsUpdate = useCallback(async (income: number, expense: number) => {
+    if (!goalsCbRef.current) return;
     try {
-      await onGoalsUpdate(income, expense);
+      await goalsCbRef.current(income, expense);
     } catch (e) {
       console.error("Goal update failed", e);
     }
-  }
+  }, []);
 
-  async function runBudgetAlerts(newTxs: Transaction[], allTxs: Transaction[]) {
-    if (!onBudgetAlert) return;
-    try {
-      const budgets = await listBudgets();
-      const relevantCategories = new Set(newTxs.map((t) => t.category));
-      const relevantBudgets = budgets.filter((b) =>
-        relevantCategories.has(b.category),
-      );
-
-      for (const budget of relevantBudgets) {
-        const status = getBudgetStatus(budget, allTxs);
-        const hasExpense = newTxs.some(
-          (t) => t.type === "expense" && t.category === budget.category,
+  const runBudgetAlerts = useCallback(
+    async (newTxs: Transaction[], allTxs: Transaction[]) => {
+      const onAlert = budgetCbRef.current;
+      if (!onAlert) return;
+      try {
+        const budgets = await listBudgets();
+        const relevantCategories = new Set(newTxs.map((t) => t.category));
+        const relevantBudgets = budgets.filter((b) =>
+          relevantCategories.has(b.category),
         );
-        if (!hasExpense) continue;
 
-        if (status.isExceeded) {
-          await onBudgetAlert(
-            "budget_exceeded",
-            budget.name,
-            budget.id,
-            budget.amount,
-            status.spent,
-            status.percentage,
+        for (const budget of relevantBudgets) {
+          const status = getBudgetStatus(budget, allTxs);
+          const hasExpense = newTxs.some(
+            (t) => t.type === "expense" && t.category === budget.category,
           );
-        } else if (status.isNearLimit) {
-          await onBudgetAlert(
-            "budget_near_limit",
-            budget.name,
-            budget.id,
-            budget.amount,
-            status.spent,
-            status.percentage,
-          );
+          if (!hasExpense) continue;
+
+          if (status.isExceeded) {
+            await onAlert(
+              "budget_exceeded",
+              budget.name,
+              budget.id,
+              budget.amount,
+              status.spent,
+              status.percentage,
+            );
+          } else if (status.isNearLimit) {
+            await onAlert(
+              "budget_near_limit",
+              budget.name,
+              budget.id,
+              budget.amount,
+              status.spent,
+              status.percentage,
+            );
+          }
         }
+      } catch (e) {
+        console.error("Budget orchestration failed", e);
       }
-    } catch (e) {
-      console.error("Budget orchestration failed", e);
-    }
-  }
+    },
+    [],
+  );
 
   const addTransaction = useCallback(
     async (
-      // Oczekujemy teraz podania categoryId (number) zamiast category (string)
-      data: Omit<Transaction, "id" | "createdAt" | "source"> & {
-        source?: string;
+      data: Omit<Transaction, "id" | "createdAt" | "category" | "source"> & {
+        category?: string;
+        source?: Transaction["source"];
       },
     ) => {
       const category =
-        data.category ||
-        autoCategorize(data.description) ||
-        DEFAULT_CATEGORIES[0];
+        data.type === "income"
+          ? INCOME_CATEGORY
+          : data.category && data.category !== INCOME_CATEGORY
+            ? data.category
+            : autoCategorize(data.description) || DEFAULT_CATEGORIES[0];
 
       const newTx: Transaction = {
         ...data,
-        id: Date.now(), // Zakładając, że Transaction.id to number (zgodnie z SQLite 'integer')
-        categoryId: data.categoryId || 1, // Zabezpieczenie na domyślną kategorię nr 1
-        description: data.description || "",
+        id: generateId(),
         createdAt: new Date().toISOString(),
+        category,
         source: data.source || "manual",
       };
 
-      const isDup = transactions.some((t) => isDuplicateTransaction(t, newTx));
+      const isDup = txRef.current.some((t) => isDuplicateTransaction(t, newTx));
       if (isDup) throw new Error("Duplicate transaction detected.");
 
-      const next = [newTx, ...transactions];
-      setLocalTransactions(next);
+      // Database first: if it fails, the UI is not left with a ghost row.
       await createTransaction(newTx);
+      const next = sortByDateDesc([newTx, ...txRef.current]);
+      setTransactions(next);
 
       await runGoalsUpdate(
         newTx.type === "income" ? newTx.amount : 0,
         newTx.type === "expense" ? newTx.amount : 0,
       );
-
       await runBudgetAlerts([newTx], next);
 
       return newTx;
     },
-    [transactions, onGoalsUpdate, onBudgetAlert],
+    [setTransactions, runGoalsUpdate, runBudgetAlerts],
   );
 
   const importTransactions = useCallback(
-    async (
-      rawTransactions: Array<{
-        amount: number;
-        description: string;
-        date: string;
-        categoryId?: number; // Zmiana na categoryId
-        type?: TransactionType;
-      }>,
-    ) => {
-      const imported: Transaction[] = [];
-      const skipped: typeof rawTransactions = [];
+    async (rawTransactions: RawTransactionInput[]) => {
+      const candidates = rawTransactions.map((raw) => ({
+        raw,
+        amount: raw.amount,
+        description: raw.description,
+        date: raw.date,
+        category:
+          raw.type === "income"
+            ? INCOME_CATEGORY
+            : raw.category &&
+                raw.category !== "Uncategorized" &&
+                raw.category !== INCOME_CATEGORY
+              ? raw.category
+              : autoCategorize(raw.description),
+        type: raw.type || ("expense" as TransactionType),
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+        source: "import" as const,
+      }));
 
-      for (const raw of rawTransactions) {
-        const newTx: Transaction = {
-          amount: raw.amount,
-          description: raw.description,
-          date: raw.date,
-          categoryId: raw.categoryId || 1, // Domyślna kategoria zamiast autoCategorize (które zwracało tekst)
-          type: raw.type || "expense",
-          id: Date.now() + Math.floor(Math.random() * 1000), // Szybki generator ID
-          createdAt: new Date().toISOString(),
-          source: "import",
-        };
-
-        const isDup = [...transactions, ...imported].some((t) =>
-          isDuplicateTransaction(t, newTx),
-        );
-        if (isDup) {
-          skipped.push(raw);
-          continue;
-        }
-        imported.push(newTx);
-      }
+      const { fresh, duplicates } = partitionNewTransactions(
+        txRef.current,
+        candidates,
+      );
+      const imported: Transaction[] = fresh.map(({ raw, ...tx }) => tx);
+      const skipped: RawTransactionInput[] = duplicates.map((d) => d.raw);
 
       if (imported.length > 0) {
-        const next = [...imported, ...transactions];
-        setLocalTransactions(next);
-        await replaceTransactions(next);
+        // Only the new rows are written; existing data is never deleted.
+        await insertTransactions(imported);
+        const next = sortByDateDesc([...imported, ...txRef.current]);
+        setTransactions(next);
 
         const totalIncome = imported
           .filter((t) => t.type === "income")
@@ -216,38 +231,43 @@ export function useTransactionsService(
 
       return { imported, skipped };
     },
-    [transactions, onGoalsUpdate, onBudgetAlert],
+    [setTransactions, runGoalsUpdate, runBudgetAlerts],
   );
 
   const updateCategory = useCallback(
     async (txId: string, category: string) => {
-      const next = transactions.map((t) =>
-        t.id === txId ? { ...t, category } : t,
-      );
-      setLocalTransactions(next);
+      const tx = txRef.current.find((t) => t.id === txId);
+      if (tx?.type === "income" && category !== INCOME_CATEGORY) {
+        throw new Error('Income always uses the "Income" category.');
+      }
+      if (tx?.type === "expense" && category === INCOME_CATEGORY) {
+        throw new Error('"Income" can only be used for income.');
+      }
       await updateTransactionCategory(txId, category);
+      setTransactions(
+        txRef.current.map((t) => (t.id === txId ? { ...t, category } : t)),
+      );
     },
-    [transactions],
+    [setTransactions],
   );
 
   const removeTransaction = useCallback(
     async (txId: string) => {
-      const next = transactions.filter((t) => t.id !== txId);
-      setLocalTransactions(next);
       await deleteTransaction(txId);
+      setTransactions(txRef.current.filter((t) => t.id !== txId));
     },
-    [transactions],
+    [setTransactions],
   );
 
   const importFromReceiptImage = useCallback(
-    async (base64Data: string, mimeType: string) =>
-      processReceiptWithAI(ai, base64Data, mimeType, importTransactions),
+    async (base64Data: string, mimeType: string, options?: AiImportOptions) =>
+      processReceiptWithAI(base64Data, mimeType, importTransactions, options),
     [importTransactions],
   );
 
   const importFromStatementDocument = useCallback(
-    async (base64Data: string, mimeType: string) =>
-      processStatementWithAI(ai, base64Data, mimeType, importTransactions),
+    async (base64Data: string, mimeType: string, options?: AiImportOptions) =>
+      processStatementWithAI(base64Data, mimeType, importTransactions, options),
     [importTransactions],
   );
 
@@ -261,6 +281,14 @@ export function useTransactionsService(
     updateTransactionCategory: updateCategory,
     deleteTransaction: removeTransaction,
   };
+}
+
+function sortByDateDesc(list: Transaction[]): Transaction[] {
+  return [...list].sort((a, b) =>
+    a.date === b.date
+      ? b.createdAt.localeCompare(a.createdAt)
+      : b.date.localeCompare(a.date),
+  );
 }
 
 function getBudgetStatus(
@@ -281,8 +309,8 @@ function getBudgetStatus(
       (t) =>
         t.category === budget.category &&
         t.type === "expense" &&
-        new Date(t.date) >= start &&
-        new Date(t.date) <= end,
+        parseISO(t.date) >= start &&
+        parseISO(t.date) <= end,
     )
     .reduce((s, t) => s + t.amount, 0);
 
@@ -299,8 +327,12 @@ function getBudgetStatus(
   };
 }
 
-function getBudgetPeriodDates(budget: any): { start: Date; end: Date } {
-  const referenceDate = new Date(budget.startDate);
+function getBudgetPeriodDates(budget: {
+  period: string;
+  startDate: string;
+  endDate: string;
+}): { start: Date; end: Date } {
+  const referenceDate = parseISO(budget.startDate);
 
   switch (budget.period) {
     case "daily": {
@@ -324,21 +356,8 @@ function getBudgetPeriodDates(budget: any): { start: Date; end: Date } {
       };
     default:
       return {
-        start: new Date(budget.startDate),
-        end: new Date(budget.endDate),
+        start: parseISO(budget.startDate),
+        end: parseISO(budget.endDate),
       };
   }
-}
-
-function isDuplicateTransaction(
-  existing: Transaction,
-  candidate: Transaction,
-): boolean {
-  return (
-    existing.amount === candidate.amount &&
-    (existing.description || "").trim().toLowerCase() ===
-      (candidate.description || "").trim().toLowerCase() &&
-    existing.date === candidate.date &&
-    existing.type === candidate.type
-  );
 }

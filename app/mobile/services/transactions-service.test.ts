@@ -22,6 +22,7 @@ let mockWhere: any = null;
 let mockOperation: "insert" | "delete" | "update" | null = null;
 let mockValues: any = null;
 let mockSetValues: any = null;
+let mockJoined = false;
 
 jest.mock("drizzle-orm", () => ({
   eq: jest.fn((column, value) => ({ column, value })),
@@ -35,6 +36,12 @@ jest.mock("@/shared/client", () => {
   const db: any = {
     select: jest.fn(() => {
       mockOperation = null;
+      mockJoined = false;
+      return db;
+    }),
+
+    leftJoin: jest.fn(() => {
+      mockJoined = true;
       return db;
     }),
 
@@ -82,7 +89,21 @@ jest.mock("@/shared/client", () => {
       }
 
       if (mockCurrentTable === schema.transactions) {
-        return [...mockStore.transactions];
+        if (!mockJoined) return [...mockStore.transactions];
+        // Emulates the categories + transaction_logs join in listTransactions().
+        return mockStore.transactions.map((t) => ({
+          id: t.id,
+          idText: t.transactionIdText,
+          amount: t.amount,
+          date: t.date,
+          description: t.description,
+          category:
+            mockStore.categories.find((c) => c.id === t.categoryId)?.name ??
+            null,
+          logName:
+            mockStore.transactionLogs.find((l) => l.id === t.logId)?.fileName ??
+            null,
+        }));
       }
 
       return [];
@@ -197,6 +218,7 @@ describe("FR10: Manual transactions and categories", () => {
     mockOperation = null;
     mockValues = null;
     mockSetValues = null;
+    mockJoined = false;
     jest.clearAllMocks();
   });
 
@@ -230,21 +252,39 @@ describe("FR10: Manual transactions and categories", () => {
     expect(transactions[0].type).toBe("expense");
   });
 
-  it("should reject transaction with invalid category", async () => {
+  it("should fall back to Uncategorized for an unknown category", async () => {
+    await replaceCategories(["Food"]);
+
+    await createTransaction({
+      id: "tx-invalid",
+      amount: 20,
+      description: "Unknown category transaction",
+      date: "2026-06-23",
+      category: "InvalidCategory",
+      type: "expense",
+      createdAt: new Date().toISOString(),
+      source: "manual",
+    });
+
+    const transactions = await listTransactions();
+    expect(transactions[0].category).toBe("Uncategorized");
+  });
+
+  it("should reject a transaction with a non-positive amount", async () => {
     await replaceCategories(["Food"]);
 
     await expect(
       createTransaction({
-        id: "tx-invalid",
-        amount: 20,
-        description: "Unknown category transaction",
+        id: "tx-zero",
+        amount: 0,
+        description: "Zero",
         date: "2026-06-23",
-        category: "InvalidCategory",
+        category: "Food",
         type: "expense",
         createdAt: new Date().toISOString(),
         source: "manual",
       }),
-    ).rejects.toThrow("Invalid category.");
+    ).rejects.toThrow("Invalid transaction input.");
   });
 
   it("should prevent duplicate manual transaction", async () => {

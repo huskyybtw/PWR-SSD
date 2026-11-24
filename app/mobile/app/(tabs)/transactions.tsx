@@ -2,16 +2,17 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import {
-  ArrowDownLeft,
-  ArrowUpRight,
+  Calendar,
   Camera,
-  ChevronDown,
+  Check,
   FileText,
   Plus,
   Search,
+  SlidersHorizontal,
   X,
 } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -24,17 +25,87 @@ import {
   View,
 } from "react-native";
 
-import { useFinance } from "@/app/_finance-context";
-import { NotificationBell } from "@/components/notification-bell";
+import { TransactionRow } from "@/components/transaction-row";
+import { IncomeExpenseCards } from "@/components/income-expense-cards";
+import { TransactionFilterSheet } from "@/components/transaction-filter-sheet";
 import { Colors } from "@/constants/colors";
-import { formatCurrency, formatDate } from "@/shared/utils";
+import { formatGeminiProgress, GeminiProgress } from "@/services/ai/gemini";
+import {
+  expenseCategories,
+  INCOME_CATEGORY,
+} from "@/repositories/categories-repository";
+import { useFinance } from "@/shared/finance-context";
+import {
+  DATE_PRESET_LABELS,
+  DEFAULT_FILTERS,
+  filterTransactions,
+  TransactionFilters,
+} from "@/shared/transaction-filters";
+import {
+  formatCurrency,
+  formatMonthYear,
+  formatShortDate,
+  toIsoDate,
+} from "@/shared/utils";
+
+/** "October 2021" for a whole month, otherwise "Oct 1 – Oct 15, 2021". */
+function formatRangeLabel(from: string, to: string): string {
+  if (from && to && from.slice(0, 7) === to.slice(0, 7) && from.endsWith("-01")) {
+    const [y, m] = from.split("-").map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    if (to.endsWith(`-${String(lastDay).padStart(2, "0")}`)) {
+      return formatMonthYear(from);
+    }
+  }
+  return `${from ? formatShortDate(from) : "…"} – ${to ? formatShortDate(to) : "…"}`;
+}
+
+/** Default view of this screen: the current month, both types. */
+const SCREEN_DEFAULTS: TransactionFilters = {
+  ...DEFAULT_FILTERS,
+  datePreset: "thisMonth",
+};
+
+function FilterChip({
+  label,
+  active,
+  icon,
+  onPress,
+  onRemove,
+}: {
+  label: string;
+  active?: boolean;
+  icon?: React.ReactNode;
+  onPress?: () => void;
+  onRemove?: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      className={`h-11 flex-row items-center gap-1.5 px-4 rounded-full border ${
+        active
+          ? "bg-appPrimary-muted border-appPrimary"
+          : "bg-appSurface border-appBorder"
+      }`}
+      onPress={onPress ?? onRemove}
+    >
+      {icon}
+      <Text
+        className={`text-[13px] font-semibold ${
+          active ? "text-appPrimary-light" : "text-appText-secondary"
+        }`}
+      >
+        {label}
+      </Text>
+      {onRemove && <X size={14} color={Colors.textMuted} />}
+    </TouchableOpacity>
+  );
+}
 
 export default function TransactionsScreen() {
   const {
     transactions,
     categories,
     addTransaction,
-    importTransactions,
     updateTransactionCategory,
     deleteTransaction,
     importFromReceiptImage,
@@ -42,8 +113,33 @@ export default function TransactionsScreen() {
     addCategory,
   } = useFinance();
 
-  const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [filters, setFilters] = useState<TransactionFilters>(SCREEN_DEFAULTS);
+
+  // Deep links from the dashboard, e.g.
+  // /transactions?type=expense&from=2021-10-01&to=2021-10-31&category=Bills&ts=123
+  // `ts` makes repeated taps on the same link apply the filters again.
+  const params = useLocalSearchParams<{
+    type?: string;
+    category?: string;
+    from?: string;
+    to?: string;
+    ts?: string;
+  }>();
+  useEffect(() => {
+    if (!params.ts) return;
+    setFilters({
+      ...SCREEN_DEFAULTS,
+      type:
+        params.type === "income" || params.type === "expense"
+          ? params.type
+          : "all",
+      categories: params.category ? [params.category] : [],
+      datePreset: params.from || params.to ? "custom" : "thisMonth",
+      dateFrom: params.from ?? "",
+      dateTo: params.to ?? "",
+    });
+  }, [params.ts, params.type, params.category, params.from, params.to]);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -51,43 +147,55 @@ export default function TransactionsScreen() {
 
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isProcessingDoc, setIsProcessingDoc] = useState(false);
+  const [aiStatus, setAiStatus] = useState("");
 
   const [newAmount, setNewAmount] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newCategory, setNewCategory] = useState("Uncategorized");
   const [newType, setNewType] = useState<"expense" | "income">("expense");
-  const [newDate, setNewDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const [newDate, setNewDate] = useState(() => toIsoDate(new Date()));
   const [newCategoryName, setNewCategoryName] = useState("");
 
-  const filteredTransactions = useMemo(() => {
-    let result = [...transactions];
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (t) =>
-          t.description.toLowerCase().includes(q) ||
-          t.category.toLowerCase().includes(q),
-      );
-    }
-    if (filterCategory) {
-      result = result.filter((t) => t.category === filterCategory);
-    }
-    return result;
-  }, [transactions, search, filterCategory]);
+  const filteredTransactions = useMemo(
+    () => filterTransactions(transactions, filters),
+    [transactions, filters],
+  );
+  // Anything that differs from the default view (this month, all types).
+  const sheetFilterCount =
+    (filters.datePreset !== SCREEN_DEFAULTS.datePreset ? 1 : 0) +
+    filters.categories.length;
+  const isModified =
+    sheetFilterCount > 0 ||
+    filters.type !== "all" ||
+    filters.search.trim() !== "";
+  const periodLabel =
+    filters.datePreset === "custom"
+      ? formatRangeLabel(filters.dateFrom, filters.dateTo)
+      : DATE_PRESET_LABELS[filters.datePreset];
 
-  const totalExpenses = transactions
+  const totalExpenses = filteredTransactions
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + t.amount, 0);
-  const totalIncome = transactions
+  const totalIncome = filteredTransactions
     .filter((t) => t.type === "income")
     .reduce((s, t) => s + t.amount, 0);
 
+  const selectedTx = transactions.find((t) => t.id === selectedTxId);
+
+  const patchFilters = (patch: Partial<TransactionFilters>) =>
+    setFilters((current) => ({ ...current, ...patch }));
+
+  const onAiProgress = (progress: GeminiProgress) =>
+    setAiStatus(formatGeminiProgress(progress));
+
   async function handleAddTransaction() {
-    const amount = parseFloat(newAmount);
+    const amount = parseFloat(newAmount.replace(",", "."));
     if (isNaN(amount) || amount <= 0 || !newDesc.trim()) {
       Alert.alert("Error", "Please enter a valid amount and description.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+      Alert.alert("Error", "Date must be in YYYY-MM-DD format.");
       return;
     }
     try {
@@ -103,47 +211,50 @@ export default function TransactionsScreen() {
       setNewDesc("");
       setNewCategory("Uncategorized");
       setNewType("expense");
+      setNewDate(toIsoDate(new Date()));
     } catch (e) {
       Alert.alert("Error", (e as Error).message);
     }
   }
 
   async function handleImportFromImage() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: false,
-      quality: 0.6,
-      base64: true,
-    });
-
-    if (result.canceled || !result.assets?.[0]) return;
-
-    const selectedAsset = result.assets[0];
-    if (!selectedAsset.base64) {
-      Alert.alert("Error", "Could not read image file data.");
-      return;
-    }
-
-    const mimeType = selectedAsset.mimeType || "image/jpeg";
-    setIsProcessingImage(true);
-
     try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.6,
+        base64: true,
+      });
+
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const selectedAsset = result.assets[0];
+      if (!selectedAsset.base64) {
+        Alert.alert("Error", "Could not read image file data.");
+        return;
+      }
+
+      setIsProcessingImage(true);
+      setAiStatus("Uploading receipt…");
       const importedTx = await importFromReceiptImage(
         selectedAsset.base64,
-        mimeType,
+        selectedAsset.mimeType || "image/jpeg",
+        onAiProgress,
       );
       Alert.alert(
-        "Success",
-        `Imported "${importedTx.description}" for ${formatCurrency(importedTx.amount)}!`,
+        "Receipt imported",
+        `"${importedTx.description}" — ${formatCurrency(importedTx.amount)} (${importedTx.category})`,
       );
       setShowImportModal(false);
     } catch (error: any) {
       console.error(error);
-      const errorMessage =
-        error?.message || "Gemini AI was unable to parse this receipt.";
-      Alert.alert("Processing Failed", errorMessage);
+      Alert.alert(
+        "Receipt import failed",
+        error?.message || "Could not read this receipt.",
+      );
     } finally {
       setIsProcessingImage(false);
+      setAiStatus("");
     }
   }
 
@@ -158,146 +269,241 @@ export default function TransactionsScreen() {
 
       const selectedFile = result.assets[0];
       setIsProcessingDoc(true);
+      setAiStatus("Reading document…");
 
       const fileBase64 = await FileSystem.readAsStringAsync(selectedFile.uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const mimeType = selectedFile.mimeType || "application/pdf";
-
-      const report = await importFromStatementDocument(fileBase64, mimeType);
+      const report = await importFromStatementDocument(
+        fileBase64,
+        selectedFile.mimeType || "application/pdf",
+        onAiProgress,
+      );
 
       Alert.alert(
-        "Import Complete",
-        `Successfully integrated ${report.imported.length} new statement rows. Skipped ${report.skipped.length} existing duplicates.`,
+        "Import complete",
+        `Imported ${report.imported.length} transaction(s). Skipped ${report.skipped.length} duplicate(s).`,
       );
       setShowImportModal(false);
     } catch (error: any) {
       console.error(error);
       Alert.alert(
-        "Document Parsing Failed",
-        error?.message || "Could not successfully evaluate statement records.",
+        "Statement import failed",
+        error?.message || "Could not read transactions from this document.",
       );
     } finally {
       setIsProcessingDoc(false);
+      setAiStatus("");
+    }
+  }
+
+  async function handleChangeCategory(cat: string) {
+    if (!selectedTxId) return;
+    try {
+      await updateTransactionCategory(selectedTxId, cat);
+      setShowCategoryModal(false);
+    } catch (e) {
+      Alert.alert("Error", (e as Error).message);
     }
   }
 
   async function handleAddCategory() {
-    if (!newCategoryName.trim()) return;
-    await addCategory(newCategoryName.trim());
-    setNewCategoryName("");
+    const name = newCategoryName.trim();
+    if (!name) return;
+    try {
+      const created = await addCategory(name);
+      setNewCategoryName("");
+      // Adding a category from this sheet also assigns it to the transaction.
+      await handleChangeCategory(created);
+    } catch (e) {
+      Alert.alert("Error", (e as Error).message);
+    }
   }
+
+  function confirmDelete(txId: string) {
+    Alert.alert("Delete Transaction", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteTransaction(txId);
+            setShowCategoryModal(false);
+          } catch (e) {
+            Alert.alert("Error", (e as Error).message);
+          }
+        },
+      },
+    ]);
+  }
+
+  const isProcessing = isProcessingImage || isProcessingDoc;
 
   return (
     <View className="flex-1 bg-appBackground">
-      {/* HEADER SECTION */}
+      {/* HEADER */}
       <View className="px-5 pt-4 pb-3">
-        <View className="flex-row justify-between items-start mb-3">
-          <Text className="text-[28px] font-[800] text-appText">
-            Transactions
-          </Text>
-          {/* <NotificationBell /> */}
-        </View>
-        <View className="flex-row gap-3">
-          <View className="flex-1 bg-appSurface rounded-2xl p-[14px]">
-            <Text className="text-[12px] text-appText-muted mb-1">Income</Text>
-            <Text className="text-[20px] font-[700] text-appPrimary">
-              {formatCurrency(totalIncome)}
-            </Text>
-          </View>
-          <View className="flex-1 bg-appSurface rounded-2xl p-[14px]">
-            <Text className="text-[12px] text-appText-muted mb-1">
-              Expenses
-            </Text>
-            <Text className="text-[20px] font-[700] text-appDanger-light">
-              {formatCurrency(totalExpenses)}
-            </Text>
-          </View>
-        </View>
+        <Text className="text-[28px] font-[800] text-appText mb-3">
+          Transactions
+        </Text>
+        <IncomeExpenseCards income={totalIncome} expenses={totalExpenses} />
       </View>
 
-      {/* FILTER & SEARCH */}
-      <View className="flex-row items-center gap-[10px] px-5 mb-2">
-        <View className="flex-1 flex-row items-center bg-appSurface rounded-xl px-3 gap-2">
-          <Search size={16} color={Colors.textMuted} />
+      {/* SEARCH (filter button lives inside the bar) */}
+      <View className="px-5">
+        <View className="h-12 flex-row items-center bg-appSurface rounded-full pl-4 pr-1.5 gap-2">
+          <Search size={18} color={Colors.textMuted} />
           <TextInput
-            className="flex-1 text-appText text-[14px] py-3"
-            placeholder="Search transactions..."
+            className="flex-1 text-appText text-[15px] py-0"
+            placeholder="Search"
             placeholderTextColor={Colors.textMuted}
-            value={search}
-            onChangeText={setSearch}
+            value={filters.search}
+            onChangeText={(search) => patchFilters({ search })}
+            returnKeyType="search"
+            autoCorrect={false}
           />
-        </View>
-      </View>
-
-      {filterCategory && (
-        <View className="flex-row items-center self-start bg-appPrimary-muted rounded-[20px] px-3 py-1.5 ml-5 mb-2 gap-1.5">
-          <Text className="text-appPrimary-light text-[12px] font-[600]">
-            {filterCategory}
-          </Text>
-          <TouchableOpacity onPress={() => setFilterCategory(null)}>
-            <X size={14} color={Colors.textMuted} />
+          {filters.search.length > 0 && (
+            <TouchableOpacity
+              onPress={() => patchFilters({ search: "" })}
+              hitSlop={10}
+              className="w-6 h-6 rounded-full bg-appSurface-highlight items-center justify-center"
+            >
+              <X size={14} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            className={`w-10 h-10 rounded-full items-center justify-center ${
+              sheetFilterCount > 0 ? "bg-appPrimary" : "bg-appSurface-highlight"
+            }`}
+            onPress={() => setShowFilterSheet(true)}
+            hitSlop={4}
+          >
+            <SlidersHorizontal
+              size={16}
+              color={sheetFilterCount > 0 ? "#fff" : Colors.text}
+            />
           </TouchableOpacity>
         </View>
-      )}
+      </View>
+
+      {/* TYPE CHIPS + active filter tags */}
+      <View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
+            gap: 8,
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            alignItems: "center",
+          }}
+        >
+          <FilterChip
+            active={filters.datePreset !== SCREEN_DEFAULTS.datePreset}
+            icon={<Calendar size={14} color={Colors.primaryLight} />}
+            label={periodLabel}
+            onPress={() => setShowFilterSheet(true)}
+          />
+          {(["expense", "income"] as const).map((type) => (
+            <FilterChip
+              key={type}
+              label={type === "expense" ? "Expenses" : "Income"}
+              active={filters.type === type}
+              onPress={() =>
+                patchFilters({ type: filters.type === type ? "all" : type })
+              }
+            />
+          ))}
+          {filters.categories.map((cat) => (
+            <FilterChip
+              key={cat}
+              active
+              label={cat}
+              onRemove={() =>
+                patchFilters({
+                  categories: filters.categories.filter((c) => c !== cat),
+                })
+              }
+            />
+          ))}
+        </ScrollView>
+      </View>
+
+      <View className="flex-row items-center justify-between px-5 pb-2 min-h-[44px]">
+        <Text className="text-[12px] text-appText-muted">
+          {filteredTransactions.length}{" "}
+          {filteredTransactions.length === 1 ? "transaction" : "transactions"}
+        </Text>
+        {isModified && (
+          <TouchableOpacity
+            className="h-11 flex-row items-center gap-1 px-3 -mr-3"
+            onPress={() => setFilters(SCREEN_DEFAULTS)}
+          >
+            <X size={14} color={Colors.primary} />
+            <Text className="text-[13px] font-semibold text-appPrimary">
+              Clear filters
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* TRANSACTION LIST */}
       <FlatList
         data={filteredTransactions}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
-          <TouchableOpacity
-            className="flex-row items-center gap-3 bg-appSurface rounded-[14px] p-[14px] mb-2"
-            onLongPress={() => {
-              Alert.alert("Delete Transaction", "Are you sure?", [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: () => deleteTransaction(item.id),
-                },
-              ]);
-            }}
+          <TransactionRow
+            tx={item}
+            onLongPress={() => confirmDelete(item.id)}
             onPress={() => {
               setSelectedTxId(item.id);
               setShowCategoryModal(true);
             }}
-          >
-            <View
-              className={`w-[40px] h-[40px] rounded-[20px] items-center justify-center ${item.type === "income" ? "bg-appPrimary-muted" : "bg-appSurface-highlight"}`}
-            >
-              {item.type === "income" ? (
-                <ArrowDownLeft size={16} color={Colors.primary} />
-              ) : (
-                <ArrowUpRight size={16} color={Colors.dangerLight} />
-              )}
-            </View>
-            <View className="flex-1">
-              <Text className="text-[14px] font-[600] text-appText">
-                {item.description}
-              </Text>
-              <Text className="text-[12px] text-appText-muted mt-[2px]">
-                {item.category} • {formatDate(item.date)}
-              </Text>
-            </View>
-            <Text
-              className={`text-[15px] font-[700] mr-1 ${item.type === "income" ? "text-appPrimary" : "text-appText"}`}
-            >
-              {item.type === "income" ? "+" : "-"}
-              {formatCurrency(item.amount)}
-            </Text>
-          </TouchableOpacity>
+          />
         )}
         ListEmptyComponent={
-          <View className="items-center py-15">
-            <Text className="text-appText-muted text-[14px]">
-              No transactions found
+          <View className="items-center py-16 gap-2">
+            <Text className="text-appText text-[15px] font-semibold text-center">
+              {transactions.length === 0
+                ? "No transactions yet"
+                : isModified
+                  ? "No transactions match your filters"
+                  : `No transactions in ${periodLabel.toLowerCase()}`}
             </Text>
+            {transactions.length === 0 ? (
+              <Text className="text-appText-muted text-[13px] text-center">
+                Add one with + or import a receipt / bank statement.
+              </Text>
+            ) : (
+              <TouchableOpacity
+                onPress={() =>
+                  isModified
+                    ? setFilters(SCREEN_DEFAULTS)
+                    : setShowFilterSheet(true)
+                }
+                className="mt-2 h-11 px-5 justify-center rounded-full bg-appSurface border border-appBorder"
+              >
+                <Text className="text-appText-secondary text-[14px] font-semibold">
+                  {isModified ? "Clear filters" : "Change period"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
+      />
+
+      <TransactionFilterSheet
+        visible={showFilterSheet}
+        filters={filters}
+        defaults={SCREEN_DEFAULTS}
+        categories={categories}
+        onApply={setFilters}
+        onClose={() => setShowFilterSheet(false)}
       />
 
       {/* ACTION FLOATING BUTTONS */}
@@ -324,7 +530,10 @@ export default function TransactionsScreen() {
               <Text className="text-[20px] font-[700] text-appText">
                 Add Transaction
               </Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <TouchableOpacity
+                onPress={() => setShowAddModal(false)}
+                className="w-11 h-11 items-center justify-center -mr-2"
+              >
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
@@ -332,7 +541,7 @@ export default function TransactionsScreen() {
             <ScrollView showsVerticalScrollIndicator={false}>
               <View className="flex-row bg-appSurface rounded-xl p-1 mb-4">
                 <TouchableOpacity
-                  className={`flex-1 py-[10px] items-center rounded-[10px] ${newType === "expense" ? "bg-appSurface-elevated" : ""}`}
+                  className={`flex-1 h-11 justify-center items-center rounded-[10px] ${newType === "expense" ? "bg-appSurface-elevated" : ""}`}
                   onPress={() => setNewType("expense")}
                 >
                   <Text
@@ -342,7 +551,7 @@ export default function TransactionsScreen() {
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  className={`flex-1 py-[10px] items-center rounded-[10px] ${newType === "income" ? "bg-appSurface-elevated" : ""}`}
+                  className={`flex-1 h-11 justify-center items-center rounded-[10px] ${newType === "income" ? "bg-appSurface-elevated" : ""}`}
                   onPress={() => setNewType("income")}
                 >
                   <Text
@@ -379,11 +588,21 @@ export default function TransactionsScreen() {
               <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">
                 Category
               </Text>
+              {newType === "income" ? (
+                <View className="flex-row items-center gap-2 self-start px-[14px] py-2 rounded-[20px] border bg-appPrimary-muted border-appPrimary">
+                  <Text className="text-[13px] text-appPrimary-light font-[600]">
+                    {INCOME_CATEGORY}
+                  </Text>
+                  <Text className="text-[11px] text-appText-muted">
+                    always used for income
+                  </Text>
+                </View>
+              ) : (
               <View className="flex-row flex-wrap gap-2">
-                {categories.map((cat) => (
+                {expenseCategories(categories).map((cat) => (
                   <TouchableOpacity
                     key={cat}
-                    className={`px-[14px] py-2 rounded-[20px] border ${newCategory === cat ? "bg-appPrimary-muted border-appPrimary" : "bg-appSurface border-appBorder"}`}
+                    className={`px-4 h-11 justify-center rounded-[22px] border ${newCategory === cat ? "bg-appPrimary-muted border-appPrimary" : "bg-appSurface border-appBorder"}`}
                     onPress={() => setNewCategory(cat)}
                   >
                     <Text
@@ -394,6 +613,7 @@ export default function TransactionsScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+              )}
 
               <Text className="text-[13px] font-[600] text-appText-secondary mb-2 mt-3">
                 Date
@@ -425,9 +645,13 @@ export default function TransactionsScreen() {
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
               <Text className="text-[20px] font-[700] text-appText">
-                AI Financial Document Import
+                Import
               </Text>
-              <TouchableOpacity onPress={() => setShowImportModal(false)}>
+              <TouchableOpacity
+                onPress={() => !isProcessing && setShowImportModal(false)}
+                disabled={isProcessing}
+                className="w-11 h-11 items-center justify-center -mr-2"
+              >
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
@@ -440,23 +664,23 @@ export default function TransactionsScreen() {
               <TouchableOpacity
                 className="bg-appSurface rounded-2xl p-5 items-center border-[2px] border-appBorder border-dashed"
                 onPress={handleImportFromImage}
-                disabled={isProcessingImage || isProcessingDoc}
+                disabled={isProcessing}
               >
                 {isProcessingImage ? (
                   <View className="items-center gap-2 py-2">
                     <ActivityIndicator size="small" color={Colors.primary} />
-                    <Text className="text-appText-secondary text-[14px]">
-                      Analyzing Receipt details...
+                    <Text className="text-appText-secondary text-[14px] text-center">
+                      {aiStatus || "Analyzing receipt…"}
                     </Text>
                   </View>
                 ) : (
                   <>
                     <Camera size={24} color={Colors.primary} />
                     <Text className="text-[15px] font-[600] text-appText mt-2">
-                      Single Receipt Image Scan
+                      Receipt photo
                     </Text>
                     <Text className="text-[12px] text-appText-muted mt-0.5 text-center">
-                      Extract items from checkout snapshots & store receipts
+                      Pick a receipt image from your gallery
                     </Text>
                   </>
                 )}
@@ -466,20 +690,20 @@ export default function TransactionsScreen() {
               <TouchableOpacity
                 className="bg-appSurface rounded-2xl p-5 items-center border-[2px] border-appBorder border-dashed"
                 onPress={handleImportFromDocument}
-                disabled={isProcessingImage || isProcessingDoc}
+                disabled={isProcessing}
               >
                 {isProcessingDoc ? (
                   <View className="items-center gap-2 py-2">
                     <ActivityIndicator size="small" color={Colors.primary} />
-                    <Text className="text-appText-secondary text-[14px]">
-                      Extracting Statement Table rows...
+                    <Text className="text-appText-secondary text-[14px] text-center">
+                      {aiStatus || "Extracting statement rows…"}
                     </Text>
                   </View>
                 ) : (
                   <>
                     <FileText size={24} color={Colors.primary} />
                     <Text className="text-[15px] font-[600] text-appText mt-2">
-                      Bank Statement PDF Document
+                      Bank statement (PDF / image)
                     </Text>
                     <Text className="text-[12px] text-appText-muted mt-0.5 text-center">
                       Supports PKO BP, Inteligo, and modern electronic
@@ -494,33 +718,63 @@ export default function TransactionsScreen() {
       </Modal>
 
       {/* CHANGE CATEGORY MODAL */}
-      <Modal visible={showCategoryModal} animationType="fade" transparent>
+      <Modal
+        visible={showCategoryModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowCategoryModal(false)}
+      >
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
               <Text className="text-[20px] font-[700] text-appText">
-                Change Category
+                Category
               </Text>
-              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+              <TouchableOpacity
+                onPress={() => setShowCategoryModal(false)}
+                className="w-11 h-11 items-center justify-center -mr-2"
+              >
                 <X size={22} color={Colors.text} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {categories.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  className="flex-row justify-between items-center py-4 border-b border-appBorder-light"
-                  onPress={async () => {
-                    if (selectedTxId) {
-                      await updateTransactionCategory(selectedTxId, cat);
-                    }
-                    setShowCategoryModal(false);
-                  }}
-                >
-                  <Text className="text-[16px] text-appText">{cat}</Text>
-                  <ChevronDown size={16} color={Colors.textMuted} />
-                </TouchableOpacity>
-              ))}
+              {selectedTx && (
+                <View className="bg-appSurface rounded-xl p-3 mb-2">
+                  <Text className="text-appText font-semibold" numberOfLines={1}>
+                    {selectedTx.description}
+                  </Text>
+                  <Text className="text-appText-muted text-[12px] mt-0.5">
+                    {formatCurrency(selectedTx.amount)} •{" "}
+                    {formatShortDate(selectedTx.date)}
+                  </Text>
+                </View>
+              )}
+              {selectedTx?.type === "income" && (
+                <Text className="text-[13px] text-appText-muted py-3">
+                  Income transactions always use the "{INCOME_CATEGORY}" category.
+                </Text>
+              )}
+              {(selectedTx?.type === "income"
+                ? [INCOME_CATEGORY]
+                : expenseCategories(categories)
+              ).map((cat) => {
+                const isCurrent = selectedTx?.category === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    className="flex-row justify-between items-center py-4 border-b border-appBorder-light"
+                    onPress={() => handleChangeCategory(cat)}
+                  >
+                    <Text
+                      className={`text-[16px] ${isCurrent ? "text-appPrimary-light font-semibold" : "text-appText"}`}
+                    >
+                      {cat}
+                    </Text>
+                    {isCurrent && <Check size={18} color={Colors.primary} />}
+                  </TouchableOpacity>
+                );
+              })}
+              {selectedTx?.type !== "income" && (
               <View className="flex-row gap-3 items-center mt-4">
                 <TextInput
                   className="bg-appSurface rounded-xl px-[14px] py-3 text-appText text-[15px] border border-appBorder flex-1"
@@ -536,6 +790,17 @@ export default function TransactionsScreen() {
                   <Plus size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
+              )}
+              {selectedTxId && (
+                <TouchableOpacity
+                  className="mt-5 py-3.5 items-center rounded-xl border border-appDanger"
+                  onPress={() => confirmDelete(selectedTxId)}
+                >
+                  <Text className="text-appDanger-light font-semibold">
+                    Delete transaction
+                  </Text>
+                </TouchableOpacity>
+              )}
             </ScrollView>
           </View>
         </View>

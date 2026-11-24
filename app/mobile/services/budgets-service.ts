@@ -4,7 +4,6 @@ import {
   createBudget,
   deleteBudget,
   listBudgets,
-  replaceBudgets,
 } from "@/repositories/budgets-repository";
 import { Budget, BudgetStatus, Transaction } from "@/shared/types/finance";
 import { generateId } from "@/shared/utils";
@@ -30,18 +29,14 @@ export function useBudgetsService() {
     let active = true;
 
     async function load() {
-      const storedBudgets = await listBudgets();
-
-      if (!active) return;
-
-      if (storedBudgets && storedBudgets.length > 0) {
-        setLocalBudgets(storedBudgets);
-      } else {
-        setLocalBudgets([]);
-        await replaceBudgets([]);
+      try {
+        const storedBudgets = await listBudgets();
+        if (active) setLocalBudgets(storedBudgets ?? []);
+      } catch (error) {
+        console.error("Failed to load budgets", error);
+      } finally {
+        if (active) setIsReady(true);
       }
-
-      setIsReady(true);
     }
 
     load();
@@ -76,22 +71,19 @@ export function useBudgetsService() {
         id: generateId(),
         createdAt: new Date().toISOString(),
       };
-      const next = [...budgets, newBudget];
-      setLocalBudgets(next);
       await createBudget(newBudget);
+      setLocalBudgets((current) => [...current, newBudget]);
       return newBudget;
     },
     [budgets],
   );
 
-  const removeBudget = useCallback(
-    async (budgetId: string) => {
-      const next = budgets.filter((budget) => budget.id !== budgetId);
-      setLocalBudgets(next);
-      await deleteBudget(budgetId);
-    },
-    [budgets],
-  );
+  const removeBudget = useCallback(async (budgetId: string) => {
+    await deleteBudget(budgetId);
+    setLocalBudgets((current) =>
+      current.filter((budget) => budget.id !== budgetId),
+    );
+  }, []);
 
   function getBudgetStatus(
     budget: Budget,

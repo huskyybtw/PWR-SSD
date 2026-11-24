@@ -24,20 +24,19 @@ export function getReportData(
   );
 
   const totalIncome = filtered
-    .filter((transaction) => transaction.type === "income" || !transaction.type) // Zabezpieczenie na brakujący typ
+    .filter((transaction) => transaction.type === "income")
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
   const totalExpenses = filtered
     .filter((transaction) => transaction.type === "expense")
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
-  // Zmiana: Klucze obiektu to teraz ID Kategorii (number)
-  const categoryBreakdown: Record<number, number> = {};
+  const categoryBreakdown: Record<string, number> = {};
   for (const transaction of filtered.filter(
     (candidate) => candidate.type === "expense",
   )) {
-    categoryBreakdown[transaction.categoryId] =
-      (categoryBreakdown[transaction.categoryId] || 0) + transaction.amount;
+    categoryBreakdown[transaction.category] =
+      (categoryBreakdown[transaction.category] || 0) + transaction.amount;
   }
 
   const days = eachDayOfInterval({ start, end });
@@ -49,9 +48,7 @@ export function getReportData(
     return {
       date: dayStr,
       income: dayTxs
-        .filter(
-          (transaction) => transaction.type === "income" || !transaction.type,
-        )
+        .filter((transaction) => transaction.type === "income")
         .reduce((sum, transaction) => sum + transaction.amount, 0),
       expense: dayTxs
         .filter((transaction) => transaction.type === "expense")
@@ -59,17 +56,11 @@ export function getReportData(
     };
   });
 
-  // Ze względu na uwarunkowania TypeScript, zmieniamy typ klucza z powrotem na string przy zwracaniu do ReportData
-  const stringifiedCategoryBreakdown: Record<string, number> = {};
-  for (const [key, value] of Object.entries(categoryBreakdown)) {
-    stringifiedCategoryBreakdown[key] = value;
-  }
-
   return {
     totalIncome,
     totalExpenses,
     netBalance: totalIncome - totalExpenses,
-    categoryBreakdown: stringifiedCategoryBreakdown,
+    categoryBreakdown,
     dailyTrend,
   };
 }

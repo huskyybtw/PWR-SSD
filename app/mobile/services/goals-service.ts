@@ -1,35 +1,34 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import {
   createGoal,
   deleteGoal,
   listGoals,
-  replaceGoals,
   updateGoalAmount,
 } from "@/repositories/goals-repository";
-import { GoalProgress, FinancialGoal } from "@/shared/types/finance";
+import { GoalProgress, SavingsGoal } from "@/shared/types/finance";
 import { generateId } from "@/shared/utils";
 import { isValid, parseISO } from "date-fns";
 
 export function useGoalsService() {
-  const [goals, setLocalGoals] = useState<FinancialGoal[]>([]);
+  const [goals, setLocalGoals] = useState<SavingsGoal[]>([]);
   const [isReady, setIsReady] = useState(false);
+  // Always-current snapshot so async callbacks never work on stale state.
+  const goalsRef = useRef<SavingsGoal[]>([]);
+  goalsRef.current = goals;
 
   useEffect(() => {
     let active = true;
 
     async function load() {
-      const storedGoals = await listGoals();
-
-      if (!active) return;
-
-      if (storedGoals && storedGoals.length > 0) {
-        setLocalGoals(storedGoals);
-      } else {
-        setLocalGoals([]);
-        await replaceGoals([]);
+      try {
+        const storedGoals = await listGoals();
+        if (active) setLocalGoals(storedGoals ?? []);
+      } catch (error) {
+        console.error("Failed to load goals", error);
+      } finally {
+        if (active) setIsReady(true);
       }
-
-      setIsReady(true);
     }
 
     load();
@@ -40,67 +39,68 @@ export function useGoalsService() {
   }, []);
 
   const addGoal = useCallback(
-    async (data: Omit<FinancialGoal, "id" | "createdAt" | "currentAmount">) => {
-      const start = parseISO(data.startDate);
-      const end = parseISO(data.endDate);
-
-      if (!isValid(start) || !isValid(end)) {
-        throw new Error("Invalid start or end date.");
+    async (data: Omit<SavingsGoal, "id" | "createdAt" | "currentAmount">) => {
+      const deadline = parseISO(data.deadline);
+      if (!isValid(deadline)) {
+        throw new Error("Invalid deadline date.");
       }
 
-      const newGoal: FinancialGoal = {
+      const newGoal: SavingsGoal = {
         ...data,
         id: generateId(),
         currentAmount: 0,
         createdAt: new Date().toISOString(),
       };
-
-      const next = [...goals, newGoal];
-      setLocalGoals(next);
       await createGoal(newGoal);
+      setLocalGoals((current) => [...current, newGoal]);
       return newGoal;
     },
-    [goals],
+    [],
+  );
+
+  /** Sets several goal amounts at once (DB first, then one state update). */
+  const updateGoalAmounts = useCallback(
+    async (updates: { goalId: string; amount: number }[]) => {
+      for (const { goalId, amount } of updates) {
+        await updateGoalAmount(goalId, amount);
+      }
+      const byId = new Map(updates.map((u) => [u.goalId, u.amount]));
+      setLocalGoals((current) =>
+        current.map((goal) =>
+          byId.has(goal.id)
+            ? { ...goal, currentAmount: byId.get(goal.id)! }
+            : goal,
+        ),
+      );
+    },
+    [],
   );
 
   const updateAmount = useCallback(
     async (goalId: string, amount: number) => {
-      const goal = goals.find((candidate) => candidate.id === goalId);
+      const goal = goalsRef.current.find((candidate) => candidate.id === goalId);
       if (!goal) return null;
 
-      const updatedGoal = { ...goal, currentAmount: amount };
-      const next = goals.map((candidate) =>
-        candidate.id === goalId ? updatedGoal : candidate,
-      );
-
-      setLocalGoals(next);
-      await updateGoalAmount(goalId, amount);
-
-      return updatedGoal;
+      await updateGoalAmounts([{ goalId, amount }]);
+      return { ...goal, currentAmount: amount };
     },
-    [goals],
+    [updateGoalAmounts],
   );
 
-  const removeGoal = useCallback(
-    async (goalId: string) => {
-      const next = goals.filter((goal) => goal.id !== goalId);
-      setLocalGoals(next);
-      await deleteGoal(goalId);
-    },
-    [goals],
-  );
+  const removeGoal = useCallback(async (goalId: string) => {
+    await deleteGoal(goalId);
+    setLocalGoals((current) => current.filter((goal) => goal.id !== goalId));
+  }, []);
 
-  // Zaktualizowana funkcja kalkulacji uwzględniająca endDate
-  function getGoalProgress(goal: FinancialGoal): GoalProgress {
+  function getGoalProgress(goal: SavingsGoal): GoalProgress {
     const percentage =
       goal.targetAmount > 0
         ? Math.min(100, (goal.currentAmount / goal.targetAmount) * 100)
         : 0;
-
     const daysRemaining = Math.max(
       0,
       Math.ceil(
-        (parseISO(goal.endDate).getTime() - new Date().getTime()) /
+        (parseISO(goal.deadline).getTime() - new Date().getTime()) /
           (1000 * 60 * 60 * 24),
       ),
     );
@@ -119,9 +119,11 @@ export function useGoalsService() {
 
   return {
     goals,
+    goalsRef,
     isReady,
     addGoal,
     updateGoalAmount: updateAmount,
+    updateGoalAmounts,
     deleteGoal: removeGoal,
     getGoalProgress,
     getGoalProgresses,
