@@ -1,13 +1,14 @@
 import { useLocalSearchParams } from "expo-router";
 import { BarChart3, Calendar, ChevronDown, PieChart, X } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 import {
   CategoryBreakdown,
   ChartMode,
   ChartModeSwitch,
 } from "@/components/category-breakdown";
+import { AppModal } from "@/components/app-modal";
 import { DailyTrendChart } from "@/components/daily-trend-chart";
 import { IncomeExpenseCards } from "@/components/income-expense-cards";
 import { Colors } from "@/constants/colors";
@@ -173,7 +174,8 @@ export default function ReportsScreen() {
 
       <View style={{ height: 40 }} />
 
-      <Modal
+      <AppModal
+        name="report_period"
         visible={showRangePicker}
         animationType="fade"
         transparent
@@ -221,7 +223,7 @@ export default function ReportsScreen() {
             })}
           </View>
         </View>
-      </Modal>
+      </AppModal>
     </ScrollView>
   );
 }

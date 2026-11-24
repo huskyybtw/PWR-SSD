@@ -1,5 +1,7 @@
 import { GoogleGenAI, type Schema } from "@google/genai";
 
+import { logAppEvent } from "@/shared/uat/recorder";
+
 /**
  * Single entry point for every Gemini call in the app (receipts + statements).
  *
@@ -186,6 +188,12 @@ export async function withGeminiRetry<T>(
       console.warn(
         `[gemini] attempt ${attempt}/${maxAttempts} failed: ${describeError(error)}. Retrying in ${Math.round(delayMs)}ms`,
       );
+      logAppEvent("ai_retry", {
+        attempt,
+        maxAttempts,
+        delayMs: Math.round(delayMs),
+        reason: describeError(error),
+      });
       options.onProgress?.({
         stage: "retry",
         attempt,

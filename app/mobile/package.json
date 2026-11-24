@@ -9,7 +9,9 @@
     "web": "expo start --web",
     "db:generate": "drizzle-kit generate",
     "push:test-files": "powershell -NoProfile -ExecutionPolicy Bypass -File assets/images/push-to-emulator.ps1",
-    "test": "jest"
+    "test": "jest",
+    "uat:pull": "node scripts/uat-pull.mjs",
+    "uat:taps": "node scripts/uat-pull.mjs taps"
   },
   "dependencies": {
     "@expo/html-elements": "^0.10.1",

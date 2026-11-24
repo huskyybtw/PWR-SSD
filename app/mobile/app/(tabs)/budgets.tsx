@@ -1,8 +1,9 @@
 import { useLocalSearchParams } from "expo-router";
 import { ChevronRight, PiggyBank, Plus, Wallet, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
-import { Modal, Pressable, Text, TouchableOpacity, View } from "react-native";
+import { Pressable, Text, TouchableOpacity, View } from "react-native";
 
+import { AppModal } from "@/components/app-modal";
 import { BudgetsPanel } from "@/components/budgets-panel";
 import { GoalsPanel } from "@/components/goals-panel";
 import { Colors } from "@/constants/colors";
@@ -115,7 +116,8 @@ export default function PlanningScreen() {
       </TouchableOpacity>
 
       {/* Choose what to create */}
-      <Modal
+      <AppModal
+        name="planning_create_menu"
         visible={showCreateMenu}
         animationType="slide"
         transparent
@@ -160,7 +162,7 @@ export default function PlanningScreen() {
             ))}
           </Pressable>
         </Pressable>
-      </Modal>
+      </AppModal>
     </View>
   );
 }

@@ -6,12 +6,18 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+import { TouchCapture } from "@/components/uat/touch-capture";
+import { UatOverlay } from "@/components/uat/uat-overlay";
 import { Colors } from "@/constants/colors";
 import { bootstrapApp } from "@/shared/bootstrap";
 import { FinanceProvider } from "@/shared/finance-context";
+import { installAlertLogging } from "@/shared/uat/recorder";
 import "../global.css";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Dev builds: log native alerts during UAT sessions.
+if (__DEV__) installAlertLogging();
 
 const queryClient = new QueryClient();
 
@@ -98,7 +104,10 @@ export default function RootLayout() {
           <DatabaseErrorScreen error={error} onRetry={bootstrap} />
         ) : (
           <FinanceProvider>
-            <RootLayoutNav />
+            <TouchCapture style={{ flex: 1 }}>
+              <RootLayoutNav />
+              {__DEV__ && <UatOverlay />}
+            </TouchCapture>
           </FinanceProvider>
         )}
       </GestureHandlerRootView>

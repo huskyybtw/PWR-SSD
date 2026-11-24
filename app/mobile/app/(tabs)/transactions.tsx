@@ -17,7 +17,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   ScrollView,
   Text,
   TextInput,
@@ -25,6 +24,7 @@ import {
   View,
 } from "react-native";
 
+import { AppModal } from "@/components/app-modal";
 import { TransactionRow } from "@/components/transaction-row";
 import { IncomeExpenseCards } from "@/components/income-expense-cards";
 import { TransactionFilterSheet } from "@/components/transaction-filter-sheet";
@@ -523,7 +523,9 @@ export default function TransactionsScreen() {
       </View>
 
       {/* ADD TRANSACTION MODAL */}
-      <Modal visible={showAddModal} animationType="slide" transparent>
+      <AppModal
+        name="add_transaction"
+        visible={showAddModal} animationType="slide" transparent>
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
@@ -637,10 +639,12 @@ export default function TransactionsScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* UPDATED IMPORT TRANSACTION MODAL (NO MORE TEXT CSV RAW PASTE) */}
-      <Modal visible={showImportModal} animationType="slide" transparent>
+      <AppModal
+        name="import"
+        visible={showImportModal} animationType="slide" transparent>
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
@@ -715,10 +719,11 @@ export default function TransactionsScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* CHANGE CATEGORY MODAL */}
-      <Modal
+      <AppModal
+        name="transaction_category"
         visible={showCategoryModal}
         animationType="fade"
         transparent
@@ -804,7 +809,7 @@ export default function TransactionsScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </AppModal>
     </View>
   );
 }

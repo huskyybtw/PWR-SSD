@@ -1,0 +1,3 @@
+
+# UAT test sessions pulled from the phone (npm run uat:pull)
+uat_tests/sessions/

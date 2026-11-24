@@ -17,6 +17,7 @@ import {
   SavingsGoal,
   Transaction,
 } from "@/shared/types/finance";
+import { tracked } from "@/shared/uat/tracked";
 import { formatCurrency } from "@/shared/utils";
 
 export const [FinanceProvider, useFinance] = createContextHook(() => {
@@ -200,18 +201,49 @@ export const [FinanceProvider, useFinance] = createContextHook(() => {
     categories,
     isReady,
     unreadAlertsCount: alertsState.unreadAlertsCount,
-    addTransaction: transactionsState.addTransaction,
+    addTransaction: tracked("transaction_added", transactionsState.addTransaction, {
+      args: ([d]) => ({ type: d.type, amount: d.amount, category: d.category ?? "auto" }),
+      result: (tx) => ({ id: tx.id, category: tx.category }),
+    }),
     importTransactions: transactionsState.importTransactions,
-    updateTransactionCategory: transactionsState.updateTransactionCategory,
-    deleteTransaction: transactionsState.deleteTransaction,
-    importFromReceiptImage,
-    importFromStatementDocument,
-    addCategory: categoriesState.addCategory,
-    addBudget: budgetsState.addBudget,
-    deleteBudget: budgetsState.deleteBudget,
-    addGoal: goalsState.addGoal,
-    updateGoalAmount,
-    deleteGoal: goalsState.deleteGoal,
+    updateTransactionCategory: tracked(
+      "category_changed",
+      transactionsState.updateTransactionCategory,
+      { args: ([id, category]) => ({ id, category }) },
+    ),
+    deleteTransaction: tracked("transaction_deleted", transactionsState.deleteTransaction, {
+      args: ([id]) => ({ id }),
+    }),
+    importFromReceiptImage: tracked("import_receipt", importFromReceiptImage, {
+      result: (tx) => ({ amount: tx?.amount, category: tx?.category, date: tx?.date }),
+    }),
+    importFromStatementDocument: tracked("import_statement", importFromStatementDocument, {
+      result: (r) => ({ imported: r.imported.length, skipped: r.skipped.length }),
+    }),
+    addCategory: tracked("category_created", categoriesState.addCategory, {
+      args: ([name]) => ({ name }),
+    }),
+    addBudget: tracked("budget_created", budgetsState.addBudget, {
+      args: ([b]) => ({
+        amount: b.amount,
+        category: b.category,
+        period: b.period,
+        startDate: b.startDate,
+        endDate: b.endDate,
+      }),
+    }),
+    deleteBudget: tracked("budget_deleted", budgetsState.deleteBudget, {
+      args: ([id]) => ({ id }),
+    }),
+    addGoal: tracked("goal_created", goalsState.addGoal, {
+      args: ([g]) => ({ targetAmount: g.targetAmount, deadline: g.deadline }),
+    }),
+    updateGoalAmount: tracked("goal_contribution", updateGoalAmount, {
+      args: ([id, amount]) => ({ id, newAmount: amount }),
+    }),
+    deleteGoal: tracked("goal_deleted", goalsState.deleteGoal, {
+      args: ([id]) => ({ id }),
+    }),
     getBudgetStatus,
     getBudgetStatuses,
     getGoalProgress,

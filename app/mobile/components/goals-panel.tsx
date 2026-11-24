@@ -10,7 +10,6 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
-  Modal,
   ScrollView,
   Text,
   TextInput,
@@ -19,6 +18,7 @@ import {
 } from "react-native";
 
 import { useFinance } from "@/shared/finance-context";
+import { AppModal } from "@/components/app-modal";
 import { Colors } from "@/constants/colors";
 import { formatCurrency, formatDate, toIsoDate } from "@/shared/utils";
 
@@ -235,7 +235,9 @@ export function GoalsPanel({
       />
 
 
-      <Modal visible={showModal} animationType="slide" transparent>
+      <AppModal
+        name="new_goal"
+        visible={showModal} animationType="slide" transparent>
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
@@ -295,9 +297,11 @@ export function GoalsPanel({
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
-      <Modal visible={showContributeModal} animationType="slide" transparent>
+      <AppModal
+        name="goal_contribute"
+        visible={showContributeModal} animationType="slide" transparent>
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-appSurface-elevated rounded-t-3xl px-5 pt-5 pb-10 max-h-[85%]">
             <View className="flex-row justify-between items-center mb-5">
@@ -334,7 +338,7 @@ export function GoalsPanel({
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </AppModal>
     </View>
   );
 }

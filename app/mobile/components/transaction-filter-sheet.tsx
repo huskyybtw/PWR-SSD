@@ -1,7 +1,8 @@
 import { X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
+import { AppModal } from "@/components/app-modal";
 import { Colors } from "@/constants/colors";
 import {
   DATE_PRESET_LABELS,
@@ -88,8 +89,9 @@ export function TransactionFilterSheet({
     });
 
   return (
-    <Modal
-      visible={visible}
+    <AppModal
+        name="transaction_filters"
+        visible={visible}
       animationType="slide"
       transparent
       onRequestClose={onClose}
@@ -160,6 +162,6 @@ export function TransactionFilterSheet({
           </View>
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
